@@ -8,11 +8,13 @@ Commands:
   status                    Free space on the internal disk
   scan [--json]             What can be cleaned, grouped by what it costs
   clean [ids…] [options]    Clean items, after showing exactly what will happen
-      --group <name>        ready (default), rebuilds, yourCall or dormant
+      --group <name>        ready (default), rebuilds, yourCall, identical, forgotten or dormant
       --dry-run             Show the plan and stop
       --yes                 Don't ask for confirmation
   history                   Past cleanups and what they freed
   growth [--record]         Folders that grew fast; --record takes today's snapshot
+  identical                 Look for identical files that could share their space
+  trend                     How fast free space is falling, from the app's hourly record
 
 Sizes are in decimal GB, like Finder.
 """
@@ -41,8 +43,10 @@ func printStatus() {
 }
 
 func scanQuietly() async -> ScanResult {
-    let scan = await Scanner.scan()
+    var scan = await Scanner.scan()
     Store.saveScan(scan)
+    // Identical files come from their own scan (`headroom identical` or the app's daily one).
+    scan.candidates += Scanner.identicalCandidates(Store.identicalGroups()?.groups ?? [])
     return scan
 }
 
@@ -90,7 +94,9 @@ case "clean":
         let missing = arguments.filter { id in !scan.candidates.contains { $0.id == id } }
         if !missing.isEmpty { fail("Not found in this scan: \(missing.joined(separator: ", ")). Run `headroom scan` for ids.") }
     } else {
-        guard let group = CandidateGroup(rawValue: groupName ?? "ready") else { fail("Unknown group. Use ready, rebuilds, yourCall or dormant.") }
+        guard let group = CandidateGroup(rawValue: groupName ?? "ready") else {
+            fail("Unknown group. Use ready, rebuilds, yourCall, identical, forgotten or dormant.")
+        }
         chosen = scan.candidates(in: group).filter { $0.status(with: processes).selectedByDefault }
     }
 
@@ -104,7 +110,12 @@ case "clean":
         }
         plan.append(item)
         let quitting = status.appsToQuit.isEmpty ? "" : " (quits \(status.appsToQuit.map(\.name).joined(separator: ", ")))"
-        let how = if case .trash = item.action { "to Bin" } else { "delete" }
+        let how = switch item.action {
+        case .trash: "to Bin"
+        case .share: "share"
+        case .run: "run"
+        default: "delete"
+        }
         print("  \(pad(how, 6)) \(pad(item.sizeLabel, 14)) \(item.name)\(quitting)")
         print("         \(item.cost)")
     }
@@ -156,6 +167,24 @@ case "growth":
     } else {
         print("No snapshots yet. Run `headroom growth --record`.")
     }
+
+case "identical":
+    let started = Date()
+    print("Looking for identical files in your home folder…")
+    let groups = await IdenticalFiles.find(roots: IdenticalFiles.defaultRoots())
+    Store.saveIdentical(groups)
+    let total = groups.reduce(Int64(0)) { $0 + $1.reclaimable }
+    print("\(ByteFormat.string(total)) could be shared in \(groups.count) groups, found in \(Int(Date().timeIntervalSince(started))) s.")
+    for group in groups.prefix(20) {
+        print("  \(pad(ByteFormat.string(group.reclaimable), 9)) \(pad(group.name, 34)) \(group.detail)")
+    }
+    if !groups.isEmpty { print("\nShare them with `headroom clean --group identical`. Nothing is deleted.") }
+
+case "trend":
+    let samples = Store.freeSamples()
+    guard let first = samples.first else { print("No free-space history yet. The app records it hourly."); break }
+    print("\(samples.count) hourly readings since \(RelativeDate.dateTime(first.date)).")
+    if let runway = Trend.runway(samples) { print(runway.line) } else { print("Free space isn't falling, or there are fewer than 3 days of readings.") }
 
 case "help", "--help", "-h":
     print(usage)

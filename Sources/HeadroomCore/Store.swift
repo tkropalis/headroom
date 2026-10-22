@@ -5,12 +5,17 @@ public struct HistoryEntry: Codable, Sendable, Identifiable, Hashable {
     public var date: Date
     public var items: [String]
     public var freed: Int64
+    /// Items moved to the Bin: Bin path to original path, for Put Back.
+    public var restorable: [String: String]?
+    /// Set once the Bin items were put back.
+    public var putBack: Bool?
 
-    public init(date: Date = Date(), items: [String], freed: Int64) {
+    public init(date: Date = Date(), items: [String], freed: Int64, restorable: [String: String]? = nil) {
         self.id = UUID()
         self.date = date
         self.items = items
         self.freed = freed
+        self.restorable = restorable
     }
 
     public var summary: String {
@@ -48,6 +53,20 @@ public enum Store {
         all.insert(entry, at: 0)
         save(Array(all.prefix(200)), as: "history.json")
     }
+
+    public static func saveHistory(_ entries: [HistoryEntry]) { save(Array(entries.prefix(200)), as: "history.json") }
+
+    public static func freeSamples() -> [FreeSample] { load("free-space.json", as: [FreeSample].self) ?? [] }
+    public static func saveFreeSamples(_ samples: [FreeSample]) { save(samples, as: "free-space.json") }
+
+    public static func identicalGroups() -> (date: Date, groups: [IdenticalGroup])? {
+        load("identical.json", as: IdenticalScan.self).map { ($0.date, $0.groups) }
+    }
+    public static func saveIdentical(_ groups: [IdenticalGroup], date: Date = Date()) {
+        save(IdenticalScan(date: date, groups: groups), as: "identical.json")
+    }
+
+    struct IdenticalScan: Codable { var date: Date; var groups: [IdenticalGroup] }
 
     public static func lastScan() -> ScanResult? { load("last-scan.json", as: ScanResult.self) }
     public static func saveScan(_ scan: ScanResult) { save(scan, as: "last-scan.json") }

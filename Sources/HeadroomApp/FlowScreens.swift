@@ -33,11 +33,10 @@ struct ReviewScreen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ScreenTitle(title: "Review: \(model.reviewGroup.title)")
-            Text(model.reviewGroup == .yourCall
-                 ? "Ticked items go to the Bin. Nothing moves until you confirm."
-                 : "Nothing is removed until you confirm below.")
+            ScreenTitle(title: model.reviewGroup == .identical ? "Share space" : "Review: \(model.reviewGroup.title)")
+            Text(note)
                 .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 16).padding(.bottom, 6)
 
             ScrollView {
@@ -48,6 +47,16 @@ struct ReviewScreen: View {
             }
             .frame(maxHeight: 420)
             .fixedSize(horizontal: false, vertical: true)
+
+            if model.reviewGroup == .identical {
+                Text("Git and Time Machine see these files as changed once: git rechecks them, and the next backup copies them again.")
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 10))
+                    .padding(.horizontal, 16).padding(.top, 6)
+            }
 
             Divider().padding(.horizontal, 16).padding(.top, 6)
             VStack(alignment: .trailing, spacing: 10) {
@@ -64,6 +73,15 @@ struct ReviewScreen: View {
                 }
             }
             .padding(EdgeInsets(top: 10, leading: 16, bottom: 4, trailing: 16))
+        }
+    }
+
+    private var note: String {
+        switch model.reviewGroup {
+        case .yourCall: "Ticked items go to the Bin where they can. Nothing moves until you confirm."
+        case .forgotten: "Ticked files go to the Bin. The space comes back when you empty it."
+        case .identical: "Each set becomes copies that share one set of disk blocks. Every file stays where it is; editing one later only uses space for the change."
+        default: "Nothing is removed until you confirm below."
         }
     }
 
@@ -185,14 +203,30 @@ struct StepDot: View {
 
 struct ResultScreen: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 0 when the screen appears, 1 once the freed space has drained out of the bar.
+    @State private var drained = 0.0
 
     var body: some View {
+        let freed = model.freedTotal
+        let binned = model.outcomes.filter { $0.inBin && $0.state == .done }
+        let binOnly = freed == 0 && !binned.isEmpty
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Freed \(ByteFormat.string(model.freedTotal))")
-                    .font(.system(size: 22, weight: .semibold)).monospacedDigit()
-                Text("\(model.disk.map { ByteFormat.string($0.available) } ?? "–") free now · measured from free space before and after")
-                    .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                if binOnly {
+                    Text("Moved \(ByteFormat.string(binned.reduce(0) { $0 + ($1.expected ?? 0) })) to the Bin")
+                        .font(.system(size: 22, weight: .semibold)).monospacedDigit()
+                    Text("Empty the Bin to free the space. Until then, Put Back restores each item to where it was.")
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    CountingText(prefix: "Freed ", value: Double(freed) * drained)
+                        .font(.system(size: 22, weight: .semibold))
+                    Text(subtitle).font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if !binOnly, freed > 0, let disk = model.disk {
+                DrainBar(disk: disk, freed: freed, drained: drained)
             }
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(model.outcomes) { outcome in
@@ -200,12 +234,21 @@ struct ResultScreen: View {
                         HStack {
                             Text(outcome.name)
                             Spacer()
-                            Text(outcome.resultLabel)
-                                .monospacedDigit()
-                                .foregroundStyle(outcome.state != .done ? Color.orange : outcome.inBin ? .secondary : .green)
+                            if model.putBackIDs.contains(outcome.id) {
+                                Text("Put back").foregroundStyle(.secondary)
+                            } else {
+                                Text(outcome.resultLabel)
+                                    .monospacedDigit()
+                                    .foregroundStyle(outcome.state != .done ? Color.orange : outcome.inBin ? .secondary : .green)
+                                if model.canPutBack(outcome) {
+                                    Button("Put Back") { model.putBack(outcome) }
+                                        .buttonStyle(.glass).controlSize(.small)
+                                }
+                            }
                         }
-                        if let message = outcome.message {
+                        if let message = outcome.message, !model.putBackIDs.contains(outcome.id) {
                             Text(message).font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -218,6 +261,67 @@ struct ResultScreen: View {
             }
         }
         .padding(.horizontal, 16)
+        .onAppear {
+            drained = 0
+            if reduceMotion { drained = 1 }
+            else { withAnimation(.spring(duration: 0.45, bounce: 0).delay(0.15)) { drained = 1 } }
+        }
+    }
+
+    private var subtitle: String {
+        let free = model.disk.map { ByteFormat.string($0.available) } ?? "–"
+        let shared = model.outcomes.contains { $0.id.hasPrefix("identical:") }
+        return shared ? "Nothing was deleted · \(free) free now · measured from free space before and after"
+                      : "\(free) free now · measured from free space before and after"
+    }
+}
+
+/// Counts up to a number of bytes as `value` animates.
+struct CountingText: View, Animatable {
+    var prefix: String
+    var value: Double
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+
+    var body: some View {
+        Text(prefix + ByteFormat.string(Int64(value))).monospacedDigit()
+    }
+}
+
+/// The capacity bar after a cleanup: the freed share drains out of the used space.
+struct DrainBar: View {
+    let disk: DiskStatus
+    let freed: Int64
+    let drained: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { geo in
+                let width = geo.size.width
+                let total = Double(max(disk.total, 1))
+                HStack(spacing: 0) {
+                    Rectangle().fill(Color.secondary.opacity(0.6))
+                        .frame(width: width * Double(disk.used) / total)
+                    Rectangle().fill(Color.green)
+                        .frame(width: width * Double(freed) / total)
+                        .scaleEffect(x: 1 - drained, anchor: .leading)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Capsule().fill(.quaternary))
+                .clipShape(Capsule())
+            }
+            .frame(height: 10)
+            HStack(spacing: 0) {
+                CountingText(prefix: "", value: Double(disk.available - freed) + Double(freed) * drained)
+                Text(" free")
+            }
+            .font(.caption).foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(ByteFormat.string(disk.available)) free after freeing \(ByteFormat.string(freed))")
     }
 }
 

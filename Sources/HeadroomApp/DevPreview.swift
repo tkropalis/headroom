@@ -2,7 +2,7 @@ import AppKit
 import HeadroomCore
 import SwiftUI
 
-/// `Headroom --preview <main|review|result|growth|settings>` opens one screen in an ordinary window,
+/// `Headroom --preview <main|review|review-identical|review-forgotten|result|growth|onboarding1…3|settings|history|spacemap|offload>` opens one screen in an ordinary window,
 /// so it can be inspected or captured without clicking through the menu bar. Development only.
 @MainActor
 enum DevPreview {
@@ -19,6 +19,21 @@ enum DevPreview {
         switch screen {
         case "settings":
             root = AnyView(SettingsView().environment(model))
+        case "history":
+            // Sample data so the chart can be checked before the app has three days of readings.
+            if model.freeSamples.count < 24 {
+                let now = Date()
+                model.freeSamples = (0..<(30 * 24)).map { hour in
+                    let bytes = 31e9 - Double(hour) * 0.75e9 / 24 + (hour > 700 ? 10e9 : 0)
+                    return FreeSample(date: now.addingTimeInterval(-Double(30 * 24 - hour) * 3600), available: Int64(bytes))
+                }
+            }
+            root = AnyView(HistorySettings().environment(model).frame(width: 620, height: 600))
+        case "spacemap":
+            root = AnyView(SpaceMapView(model: model.spaceMap).environment(model).frame(width: 1000, height: 640))
+        case "offload":
+            let item = OffloadItem(path: Paths.home + "/.android/avd/Pixel_7.avd", name: "Pixel_7", bytes: 3_100_000_000, quit: [])
+            root = AnyView(OffloadSheet(item: item) { _ in }.frame(width: 460))
         default:
             prepare(screen, model: model)
             root = AnyView(PopoverView().environment(model).background(.regularMaterial))
@@ -44,6 +59,12 @@ enum DevPreview {
             model.openReview(.ready)
         case "review-yourcall":
             model.openReview(.yourCall)
+        case "review-identical":
+            model.openReview(.identical)
+        case "review-forgotten":
+            model.openReview(.forgotten)
+        case "onboarding1", "onboarding2", "onboarding3":
+            model.screen = .onboarding(Int(String(screen.last!))!)
         case "result":
             model.outcomes = [
                 CleanupOutcome(id: "npm-cache", name: "npm download cache", state: .done, freed: 73_000_000, message: nil),

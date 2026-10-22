@@ -52,7 +52,11 @@ public enum GrowthTracker {
                 if expanded.contains(path) { visit(path) } else { out.append(path) }
             }
         }
-        for root in [Paths.home, "/Applications", Paths.userFolders] { visit(root) }
+        for root in [Paths.home, "/Applications", Paths.userFolders, "/Library"] { visit(root) }
+        // Outside the home folder, a few places hold most of the rest: Homebrew, swap and
+        // the simulator runtimes macOS keeps as system assets.
+        out += ["/opt", "/usr/local", "/private/var/vm", "/System/Volumes/Data/System/Library/AssetsV2"]
+            .filter { fm.fileExists(atPath: $0) }
         return out
     }
 

@@ -2,6 +2,7 @@ import AppKit
 import HeadroomCore
 import Observation
 import ServiceManagement
+import SwiftUI
 import UserNotifications
 
 enum MenuDisplay: String, CaseIterable, Identifiable {
@@ -19,6 +20,8 @@ enum MenuDisplay: String, CaseIterable, Identifiable {
 enum Screen: Equatable {
     case main, review, cleaning, result
     case growth(GrowthAlert)
+    /// First run, steps 1 to 3.
+    case onboarding(Int)
 }
 
 /// Thread-safe flag the cleaner checks between items.
@@ -47,6 +50,21 @@ final class AppModel {
     var outcomes: [CleanupOutcome] = []
     private let stopFlag = StopFlag()
 
+    // Identical files: a slower scan of its own, at most once a day.
+    var identicalGroups: [IdenticalGroup] = Store.identicalGroups()?.groups ?? []
+    var identicalDate: Date? = Store.identicalGroups()?.date
+    var scanningIdentical = false
+
+    // Trend
+    var freeSamples: [FreeSample] = Store.freeSamples()
+    var purgeable: Int64 = Purgeable.bytes()
+    @ObservationIgnored private var runwayNotified = false
+
+    // Space Map and offload
+    let spaceMap = SpaceMapModel()
+    var offloadRequest: OffloadItem?
+    var offloadedCount = Offloader.records().count
+
     // Growth and history
     var growthAlerts: [GrowthAlert] = []
     var dismissedAlerts: Set<String> = []
@@ -63,11 +81,17 @@ final class AppModel {
     var dailyScan: Bool { didSet { defaults.set(dailyScan, forKey: "dailyScan") } }
     var disabledEntries: Set<String> { didSet { defaults.set(Array(disabledEntries), forKey: "disabledEntries") } }
     var excludedPaths: [String] { didSet { defaults.set(excludedPaths, forKey: "excludedPaths") } }
+    var runwayDays: Int { didSet { defaults.set(runwayDays, forKey: "runwayDays") } }
+    var forgottenMB: Int { didSet { defaults.set(forgottenMB, forKey: "forgottenMB") } }
+    var forgottenMonths: Int { didSet { defaults.set(forgottenMonths, forKey: "forgottenMonths") } }
+    var identicalMinKB: Int { didSet { defaults.set(identicalMinKB, forKey: "identicalMinKB") } }
+    var hasOnboarded: Bool { didSet { defaults.set(hasOnboarded, forKey: "hasOnboarded") } }
     @ObservationIgnored private var lastNotifiedLevel: HeadroomLevel = .ok
 
     init() {
         defaults.register(defaults: ["warnGB": 20, "criticalGB": 10, "growthGB": 5, "dailyScan": true,
-                                     "menuDisplay": MenuDisplay.gigabytes.rawValue])
+                                     "menuDisplay": MenuDisplay.gigabytes.rawValue, "runwayDays": 7,
+                                     "forgottenMB": 500, "forgottenMonths": 6, "identicalMinKB": 100])
         warnGB = defaults.integer(forKey: "warnGB")
         criticalGB = defaults.integer(forKey: "criticalGB")
         growthGB = defaults.integer(forKey: "growthGB")
@@ -75,10 +99,17 @@ final class AppModel {
         dailyScan = defaults.bool(forKey: "dailyScan")
         disabledEntries = Set(defaults.stringArray(forKey: "disabledEntries") ?? [])
         excludedPaths = defaults.stringArray(forKey: "excludedPaths") ?? []
+        runwayDays = defaults.integer(forKey: "runwayDays")
+        forgottenMB = defaults.integer(forKey: "forgottenMB")
+        forgottenMonths = defaults.integer(forKey: "forgottenMonths")
+        identicalMinKB = defaults.integer(forKey: "identicalMinKB")
+        // Someone who used v1 already has a scan; they don't need the welcome.
+        hasOnboarded = defaults.bool(forKey: "hasOnboarded") || Store.lastScan() != nil
         dismissedAlerts = Set(defaults.stringArray(forKey: "dismissedAlerts") ?? [])
         lastNotifiedLevel = level
         loadGrowthAlerts()
         requestNotificationPermission()
+        configureSpaceMap()
         startTimers()
     }
 
@@ -101,7 +132,20 @@ final class AppModel {
 
     var visibleAlerts: [GrowthAlert] { growthAlerts.filter { !dismissedAlerts.contains(alertKey($0)) } }
 
-    func candidates(in group: CandidateGroup) -> [Candidate] { scan?.candidates(in: group) ?? [] }
+    func candidates(in group: CandidateGroup) -> [Candidate] {
+        if group == .identical {
+            return Scanner.identicalCandidates(identicalGroups).sorted { $0.expectedBytes > $1.expectedBytes }
+        }
+        return scan?.candidates(in: group) ?? []
+    }
+
+    var allCandidates: [Candidate] { (scan?.candidates ?? []) + Scanner.identicalCandidates(identicalGroups) }
+
+    /// Shown under the headroom line when free space is falling and would run out within 30 days.
+    var runway: Runway? {
+        guard let runway = Trend.runway(freeSamples), runway.daysLeft <= 30 else { return nil }
+        return runway
+    }
 
     func status(of item: Candidate) -> CandidateStatus { item.status(with: processes) }
 
@@ -123,7 +167,8 @@ final class AppModel {
         guard !items.isEmpty else { return "Clean" }
         let size = ByteFormat.string(total(items))
         let trashOnly = items.allSatisfy { if case .trash = $0.action { true } else { false } }
-        let verb = trashOnly ? "Move \(size) to Bin" : "Clean \(size)"
+        let shareOnly = items.allSatisfy { if case .share = $0.action { true } else { false } }
+        let verb = shareOnly ? "Share space, \(size)" : trashOnly ? "Move \(size) to the Bin" : "Clean \(size)"
         let quits = appsToQuitForSelection.map(\.name)
         return quits.isEmpty ? verb : "Quit \(quits.joined(separator: " and ")) and \(verb.prefix(1).lowercased() + verb.dropFirst())"
     }
@@ -132,7 +177,16 @@ final class AppModel {
 
     func refreshDisk() {
         disk = DiskStatus.current()
+        purgeable = Purgeable.bytes()
+        if let disk {
+            let updated = Trend.record(disk.available, into: freeSamples)
+            if updated != freeSamples {
+                freeSamples = updated
+                Store.saveFreeSamples(updated)
+            }
+        }
         checkThresholds()
+        checkRunway()
     }
 
     func refreshProcesses() { processes = ProcessSnapshot.capture() }
@@ -140,7 +194,8 @@ final class AppModel {
     func startScan() {
         guard !scanning else { return }
         scanning = true
-        let options = ScanOptions(disabledEntries: disabledEntries, excludedPaths: excludedPaths)
+        let options = ScanOptions(disabledEntries: disabledEntries, excludedPaths: excludedPaths,
+                                  forgottenBytes: Int64(forgottenMB) * 1_000_000, forgottenDays: forgottenMonths * 30)
         Task {
             let result = await Task.detached(priority: .utility) { await Scanner.scan(options) }.value
             Store.saveScan(result)
@@ -148,6 +203,22 @@ final class AppModel {
             refreshProcesses()
             refreshDisk()
             scanning = false
+            if Date().timeIntervalSince(identicalDate ?? .distantPast) > 24 * 3600 { startIdenticalScan() }
+        }
+    }
+
+    /// Walks the home folder for identical files. Slow, so it runs in the background at most daily.
+    func startIdenticalScan() {
+        guard !scanningIdentical, !disabledEntries.contains("identical") else { return }
+        scanningIdentical = true
+        let minimum = Int64(identicalMinKB) * 1000
+        let excluded = excludedPaths
+        Task {
+            let groups = await IdenticalFiles.find(roots: IdenticalFiles.defaultRoots(), minimumBytes: minimum, excluded: excluded)
+            Store.saveIdentical(groups)
+            identicalGroups = groups
+            identicalDate = Date()
+            scanningIdentical = false
         }
     }
 
@@ -156,7 +227,17 @@ final class AppModel {
         NSApp.activate()
         refreshDisk()
         refreshProcesses()
+        if !hasOnboarded {
+            if case .onboarding = screen {} else { screen = .onboarding(1) }
+            return
+        }
         if scan == nil || Date().timeIntervalSince(scan!.date) > 3600 { startScan() }
+    }
+
+    func finishOnboarding() {
+        hasOnboarded = true
+        screen = .main
+        startScan()
     }
 
     // MARK: - Review and clean
@@ -165,7 +246,9 @@ final class AppModel {
         refreshProcesses()
         reviewGroup = group
         reviewItems = candidates(in: group)
-        selection = preselect ?? Set(reviewItems.filter { group == .ready && status(of: $0).selectedByDefault }.map(\.id))
+        // Groups where nothing is lost, or where ticking is the point, start ticked.
+        let ticked: Set<CandidateGroup> = [.ready, .identical, .forgotten]
+        selection = preselect ?? Set(reviewItems.filter { ticked.contains(group) && status(of: $0).selectedByDefault }.map(\.id))
         screen = .review
     }
 
@@ -193,14 +276,58 @@ final class AppModel {
             let freed = results.reduce(Int64(0)) { $0 + $1.freed }
             let done = results.filter { $0.state == .done }
             if !done.isEmpty {
-                let entry = HistoryEntry(items: done.map(\.name), freed: freed)
+                let restorable = done.compactMap(\.restorable).reduce(into: [String: String]()) { $0.merge($1) { a, _ in a } }
+                let entry = HistoryEntry(items: done.map(\.name), freed: freed, restorable: restorable.isEmpty ? nil : restorable)
                 Store.appendHistory(entry)
                 history.insert(entry, at: 0)
+            }
+            if items.contains(where: { $0.group == .identical }) {
+                let shared = Set(items.filter { $0.group == .identical }.map(\.id))
+                identicalGroups.removeAll { shared.contains("identical:" + $0.id) }
+                Store.saveIdentical(identicalGroups, date: identicalDate ?? Date())
             }
             refreshDisk()
             screen = .result
             startScan()
         }
+    }
+
+    // MARK: - Put Back
+
+    /// Outcomes already put back on the result screen.
+    var putBackIDs: Set<String> = []
+
+    func canPutBack(_ outcome: CleanupOutcome) -> Bool {
+        guard !putBackIDs.contains(outcome.id), let map = outcome.restorable else { return false }
+        return Cleaner.canPutBack(map)
+    }
+
+    func putBack(_ outcome: CleanupOutcome) {
+        guard let map = outcome.restorable else { return }
+        let failed = Cleaner.putBack(map)
+        if failed.isEmpty { putBackIDs.insert(outcome.id) }
+        markHistoryPutBack(map)
+        startScan()
+    }
+
+    func canPutBack(_ entry: HistoryEntry) -> Bool {
+        guard entry.putBack != true, let map = entry.restorable else { return false }
+        return Cleaner.canPutBack(map)
+    }
+
+    func putBack(_ entry: HistoryEntry) {
+        guard let map = entry.restorable else { return }
+        _ = Cleaner.putBack(map)
+        markHistoryPutBack(map)
+        startScan()
+    }
+
+    private func markHistoryPutBack(_ map: [String: String]) {
+        for index in history.indices {
+            guard let entryMap = history[index].restorable, !Set(entryMap.keys).isDisjoint(with: map.keys) else { continue }
+            if !Cleaner.canPutBack(entryMap) { history[index].putBack = true }
+        }
+        Store.saveHistory(history)
     }
 
     func stopCleaning() { stopFlag.set(true) }
@@ -254,27 +381,73 @@ final class AppModel {
     private func alertKey(_ alert: GrowthAlert) -> String { alert.path + "@" + String(alert.current) }
 
     /// Space used by each kind of folder, from the latest snapshot.
-    var categories: [(name: String, bytes: Int64)] {
+    var categories: [SpaceCategory] {
         guard let disk, let snapshot = Store.snapshots().last else { return [] }
-        let home = Paths.home
-        let rules: [(String, (String) -> Bool)] = [
-            ("Developer", { p in ["/Library/Developer", "/Library/Android", "/.gradle", "/.android", "Xcode.app",
-                                   "Android Studio.app", "/.cocoapods", "/.swiftpm", "/.expo", "/.maestro"].contains { p.contains($0) } }),
-            ("Docker", { p in p.contains("com.docker.docker") || p.hasSuffix("/.docker") || p.hasSuffix("Docker.app") }),
-            ("Claude", { p in p.hasSuffix("/Application Support/Claude") || p.hasSuffix("/.claude") || p.hasSuffix("Claude.app") }),
-            ("Caches", { p in p.contains("/Library/Caches/") || p.hasPrefix(Paths.userFolders) || p.hasSuffix("/.npm") || p.hasSuffix("/.cache") }),
-            ("Apps", { p in p.hasPrefix("/Applications/") }),
-            ("Projects", { p in p.hasPrefix(home + "/") && !p.dropFirst(home.count + 1).contains("/")
-                             && !p.dropFirst(home.count + 1).hasPrefix(".") }),
-        ]
-        var totals: [String: Int64] = [:]
-        for (path, size) in snapshot.sizes {
-            if let rule = rules.first(where: { $0.1(path) }) { totals[rule.0, default: 0] += size }
+        return SpaceTree.categories(snapshot: snapshot, disk: disk)
+    }
+
+    // MARK: - Space Map
+
+    private func configureSpaceMap() {
+        let map = spaceMap
+        map.candidateFor = { [weak self] path in
+            self?.allCandidates.first { $0.paths.contains(path) || $0.projectPath == path }
         }
-        var out = rules.map { ($0.0, totals[$0.0] ?? 0) }.filter { $0.1 > 0 }
-        let measured = out.reduce(Int64(0)) { $0 + $1.1 }
-        out.append(("System and other", max(0, disk.used - measured)))
-        return out.map { (name: $0.0, bytes: $0.1) }
+        map.blockerFor = { [weak self] path in
+            guard let self else { return nil }
+            if let item = self.allCandidates.first(where: { $0.paths.contains(path) }), let blocker = self.status(of: item).blocker {
+                return blocker
+            }
+            if let process = self.processes.processUsing(folder: path) {
+                return "\((process as NSString).lastPathComponent) is using this folder."
+            }
+            return nil
+        }
+        map.offloadBlocker = { path in Offloader.canOffload(path) }
+        map.onClean = { [weak self] item in
+            guard let self else { return }
+            self.openReview(item.group, preselect: [item.id])
+            self.reviewItems = [item]
+            self.flowInWindow = true
+        }
+        map.onOffload = { [weak self] node in
+            guard let self else { return }
+            let quit = self.allCandidates.first { $0.paths.contains(node.path) }?.quit ?? []
+            self.offloadRequest = OffloadItem(path: node.path, name: node.name, bytes: node.reclaimable, quit: quit)
+        }
+        map.onTrash = { [weak self] node in
+            guard let self else { return }
+            Task {
+                let item = Candidate(id: "map:" + node.path, name: node.name, detail: Paths.display(node.path), group: .yourCall,
+                                     size: SizeInfo(allocated: node.allocated, unshared: node.unshared), isEstimate: false,
+                                     cost: "", quit: [], blockRules: [], projectPath: nil, action: .trash([node.path]), fixedBlocker: nil)
+                let outcome = await Cleaner().clean(item)
+                if outcome.state == .done {
+                    let entry = HistoryEntry(items: [node.name], freed: outcome.freed, restorable: outcome.restorable)
+                    Store.appendHistory(entry)
+                    self.history.insert(entry, at: 0)
+                    map.removeNode(node.path)
+                }
+            }
+        }
+        map.offloadedView = { AnyView(OffloadedList()) }
+        map.hasFullDiskAccess = { [weak self] in self?.hasFullDiskAccess ?? true }
+        map.openFullDiskAccess = { [weak self] in self?.openFullDiskAccessSettings() }
+    }
+
+    /// A review started from the Space Map runs in a sheet on that window.
+    var flowInWindow = false
+
+    func offloadFinished(_ record: OffloadRecord?) {
+        offloadRequest = nil
+        offloadedCount = Offloader.records().count
+        if let record {
+            spaceMap.removeNode(record.originalPath)
+            refreshDisk()
+            let entry = HistoryEntry(items: ["\(record.name), offloaded"], freed: record.bytes)
+            Store.appendHistory(entry)
+            history.insert(entry, at: 0)
+        }
     }
 
     // MARK: - Notifications and timers
@@ -302,6 +475,18 @@ final class AppModel {
         let extra = ready > 0 ? " \(ByteFormat.string(ready)) of caches can be cleaned without losing anything." : ""
         notify(title: current == .critical ? "Headroom is critical" : "Headroom is low",
                body: "\(ByteFormat.string(disk.available)) free.\(extra)")
+    }
+
+    /// One notification each time the runway drops inside the warning window.
+    private func checkRunway() {
+        guard let runway = Trend.runway(freeSamples) else { runwayNotified = false; return }
+        if runway.daysLeft > runwayDays { runwayNotified = false; return }
+        guard !runwayNotified else { return }
+        runwayNotified = true
+        let ready = total(readyNow)
+        let extra = ready > 0 ? " \(ByteFormat.string(ready)) can be cleaned without losing anything." : ""
+        notify(title: "Running out in about \(runway.daysLeft) \(runway.daysLeft == 1 ? "day" : "days")",
+               body: "At this rate the disk is full in about \(runway.daysLeft) \(runway.daysLeft == 1 ? "day" : "days").\(extra)")
     }
 
     private func startTimers() {

@@ -23,6 +23,62 @@ struct HeadroomApp: App {
             SettingsView()
                 .environment(model)
         }
+
+        Window("Space Map", id: "spacemap") {
+            SpaceMapWindow()
+                .environment(model)
+        }
+        .defaultSize(width: 1000, height: 640)
+        .windowResizability(.contentMinSize)
+        // Only opens when asked for, never at launch or from a restored session.
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+    }
+}
+
+/// The Space Map, plus the sheets it starts: offloading, and reviews opened from the inspector.
+struct SpaceMapWindow: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        SpaceMapView(model: model.spaceMap)
+            .frame(minWidth: 760, minHeight: 460)
+            .sheet(isPresented: Binding(get: { model.offloadRequest != nil }, set: { if !$0 { model.offloadRequest = nil } })) {
+                if let item = model.offloadRequest {
+                    OffloadSheet(item: item) { record in model.offloadFinished(record) }
+                }
+            }
+            .sheet(isPresented: Binding(get: { model.flowInWindow && model.screen != .main },
+                                        set: { if !$0 { model.flowInWindow = false; model.screen = .main } })) {
+                FlowSheet().environment(model)
+            }
+            // Headroom is a menu bar app; while this window is open it behaves like a normal app.
+            .onAppear {
+                NSApp.setActivationPolicy(.regular)
+                NSApp.activate()
+                model.refreshProcesses()
+                model.spaceMap.refresh()
+            }
+            .onDisappear { NSApp.setActivationPolicy(.accessory) }
+    }
+}
+
+/// Review, cleaning and result, shown in the Space Map window instead of the popover.
+struct FlowSheet: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            switch model.screen {
+            case .review: ReviewScreen()
+            case .cleaning: CleaningScreen()
+            case .result: ResultScreen()
+            default: EmptyView()
+            }
+        }
+        .padding(.vertical, 14)
+        .frame(width: 400)
     }
 }
 

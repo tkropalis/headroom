@@ -13,6 +13,7 @@ struct PopoverView: View {
             case .cleaning: CleaningScreen()
             case .result: ResultScreen()
             case .growth(let alert): GrowthScreen(alert: alert)
+            case .onboarding(let step): OnboardingScreen(step: step)
             }
         }
         .padding(.vertical, 12)
@@ -26,6 +27,21 @@ struct PopoverView: View {
 
 struct MainScreen: View {
     @Environment(AppModel.self) private var model
+    @FocusState private var focused: CandidateGroup?
+
+    static let groups: [CandidateGroup] = [.rebuilds, .yourCall, .identical, .forgotten, .dormant]
+
+    /// Groups that have a row right now, in the order shown.
+    private var visibleGroups: [CandidateGroup] { Self.groups.filter { !model.candidates(in: $0).isEmpty } }
+
+    /// ↑ and ↓ move between group rows, → opens one and ← closes it.
+    private func move(_ step: Int) -> KeyPress.Result {
+        let rows = visibleGroups
+        guard !rows.isEmpty else { return .ignored }
+        let index = focused.flatMap { rows.firstIndex(of: $0) } ?? (step > 0 ? -1 : rows.count)
+        focused = rows[max(0, min(rows.count - 1, index + step))]
+        return .handled
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -46,11 +62,23 @@ struct MainScreen: View {
             Divider().padding(.horizontal, 16)
 
             VStack(spacing: 0) {
-                ForEach([CandidateGroup.rebuilds, .yourCall, .dormant], id: \.self) { group in
-                    GroupDisclosure(group: group)
+                ForEach(Self.groups, id: \.self) { group in
+                    GroupDisclosure(group: group, focus: $focused)
                 }
             }
             .padding(6)
+            .onKeyPress(.downArrow) { move(1) }
+            .onKeyPress(.upArrow) { move(-1) }
+            .onKeyPress(.rightArrow) {
+                guard let focused else { return .ignored }
+                model.expandedGroup = focused
+                return .handled
+            }
+            .onKeyPress(.leftArrow) {
+                guard focused != nil else { return .ignored }
+                model.expandedGroup = nil
+                return .handled
+            }
 
             Divider().padding(.horizontal, 16)
             Footer()
@@ -70,10 +98,22 @@ struct HeadroomHeader: View {
                     .foregroundStyle(model.level == .critical ? Color.red : Color.primary)
                 Text("free").font(.title3).foregroundStyle(.secondary)
             }
-            Text(subLine)
-                .font(.callout)
-                .monospacedDigit()
-                .foregroundStyle(subColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(subLine)
+                    .font(.callout)
+                    .monospacedDigit()
+                    .foregroundStyle(subColor)
+                // Purgeable space only matters once space is short.
+                if model.level != .ok, model.purgeable >= 500_000_000 {
+                    Text("Plus \(ByteFormat.string(model.purgeable)) that macOS can free on its own.")
+                        .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                }
+                if let runway = model.runway {
+                    Label(runway.line, systemImage: "chart.line.downtrend.xyaxis")
+                        .font(.callout).monospacedDigit()
+                        .foregroundStyle(runway.daysLeft <= model.runwayDays ? Color.orange : Color.secondary)
+                }
+            }
             CapacityBar()
         }
     }
@@ -99,6 +139,12 @@ struct HeadroomHeader: View {
 
 struct CapacityBar: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+
+    private func open(_ category: String) {
+        model.spaceMap.sidebar = .category(category)
+        openWindow(id: "spacemap")
+    }
 
     static let palette: [Color] = [.blue, .purple, .orange, .teal, .yellow, .green, .gray]
 
@@ -119,7 +165,9 @@ struct CapacityBar: View {
                                 Rectangle()
                                     .fill(Self.palette[index % Self.palette.count].opacity(index == categories.count - 1 ? 0.45 : 0.9))
                                     .frame(width: max(1, width * Double(category.bytes) / Double(disk.total)))
-                                    .help("\(category.name): \(ByteFormat.string(category.bytes))")
+                                    .help("\(category.name): \(ByteFormat.string(category.bytes)). Click to open in Space Map.")
+                                    .contentShape(.rect)
+                                    .onTapGesture { open(category.name) }
                             }
                         }
                     }
@@ -137,28 +185,33 @@ struct CapacityBar: View {
             if !categories.isEmpty {
                 FlowLegend(items: categories.enumerated().map { index, c in
                     (Self.palette[index % Self.palette.count].opacity(index == categories.count - 1 ? 0.45 : 0.9),
-                     "\(c.name) \(ByteFormat.string(c.bytes))")
+                     "\(c.name) \(ByteFormat.string(c.bytes))", { open(c.name) })
                 })
             }
         }
         .padding(.top, 4)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(Int(disk.usedFraction * 100)) percent used")
     }
 }
 
 struct FlowLegend: View {
-    let items: [(Color, String)]
+    let items: [(Color, String, () -> Void)]
 
     var body: some View {
-        // Two columns keep the legend compact and aligned.
+        // Two columns keep the legend compact and aligned. Each entry opens the Space Map there.
         LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)],
-                  alignment: .leading, spacing: 3) {
+                  alignment: .leading, spacing: 1) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 2).fill(item.0).frame(width: 8, height: 8)
-                    Text(item.1).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                Button(action: item.2) {
+                    HStack(spacing: 5) {
+                        RoundedRectangle(cornerRadius: 2).fill(item.0).frame(width: 8, height: 8)
+                        Text(item.1).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    }
+                    .padding(.vertical, 2)
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
+                .help("Open in Space Map")
+                .accessibilityLabel("\(item.1), open in Space Map")
             }
         }
     }
@@ -229,6 +282,7 @@ struct ReadyRow: View {
 struct GroupDisclosure: View {
     @Environment(AppModel.self) private var model
     let group: CandidateGroup
+    var focus: FocusState<CandidateGroup?>.Binding
 
     var body: some View {
         let items = model.candidates(in: group)
@@ -253,6 +307,8 @@ struct GroupDisclosure: View {
                     .background(open ? Color.primary.opacity(0.06) : .clear, in: .rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
+                .focusable()
+                .focused(focus, equals: group)
                 .accessibilityAddTraits(open ? .isSelected : [])
 
                 if open {
@@ -288,13 +344,18 @@ struct GroupDisclosure: View {
         let size = ByteFormat.string(model.total(items))
         let uncertain = items.contains { $0.size.sharesSpace || $0.isEstimate }
         let text = uncertain ? "up to \(size)" : size
-        return group == .dormant ? "\(text) · \(items.count)" : text
+        switch group {
+        case .dormant, .forgotten: return "\(text) · \(items.count)"
+        case .identical: return "\(text) · nothing deleted"
+        default: return text
+        }
     }
 }
 
 struct Footer: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -309,6 +370,10 @@ struct Footer: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
+            MenuRow(title: "Space Map…", shortcut: "") {
+                model.spaceMap.sidebar = .all
+                openWindow(id: "spacemap")
+            }
             MenuRow(title: "Settings…", shortcut: "⌘,") {
                 NSApp.activate()
                 openSettings()

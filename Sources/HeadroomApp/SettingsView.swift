@@ -1,4 +1,5 @@
 import AppKit
+import Charts
 import HeadroomCore
 import SwiftUI
 
@@ -7,10 +8,10 @@ struct SettingsView: View {
         TabView {
             // Each tab sets its own height; the window resizes as you switch, like System Settings panes.
             Tab("General", systemImage: "gearshape") { GeneralSettings().frame(width: 560, height: 230) }
-            Tab("Alerts", systemImage: "bell.badge") { AlertSettings().frame(width: 560, height: 330) }
-            Tab("Scanning", systemImage: "magnifyingglass") { ScanningSettings().frame(width: 560, height: 470) }
-            Tab("Caches", systemImage: "list.bullet") { CacheSettings().frame(width: 560, height: 520) }
-            Tab("History", systemImage: "clock.arrow.circlepath") { HistorySettings().frame(width: 560, height: 360) }
+            Tab("Alerts", systemImage: "bell.badge") { AlertSettings().frame(width: 560, height: 420) }
+            Tab("Scanning", systemImage: "magnifyingglass") { ScanningSettings().frame(width: 560, height: 600) }
+            Tab("Caches", systemImage: "list.bullet") { CacheSettings().frame(width: 560, height: 560) }
+            Tab("History", systemImage: "clock.arrow.circlepath") { HistorySettings().frame(width: 620, height: 600) }
         }
     }
 }
@@ -60,6 +61,13 @@ struct AlertSettings: View {
             } footer: {
                 Text("Compared with the snapshot from the day before.")
             }
+            Section {
+                Stepper(value: $model.runwayDays, in: 1...30) {
+                    LabeledContent("Warn when the disk would be full within", value: "\(model.runwayDays) days")
+                }
+            } footer: {
+                Text("Based on the last 7 days. The popover shows the trend from 30 days out.")
+            }
         }
         .formStyle(.grouped)
     }
@@ -84,6 +92,36 @@ struct ScanningSettings: View {
                 }
             } footer: {
                 Text("Scans only measure. Nothing is cleaned without you.")
+            }
+            Section {
+                Toggle("Look for forgotten files", isOn: entryToggle("forgotten"))
+                Stepper(value: $model.forgottenMB, in: 100...5000, step: 100) {
+                    LabeledContent("Larger than", value: "\(model.forgottenMB) MB")
+                }
+                Picker("Not opened for", selection: $model.forgottenMonths) {
+                    ForEach([3, 6, 12, 24], id: \.self) { Text($0 == 12 ? "1 year" : $0 == 24 ? "2 years" : "\($0) months").tag($0) }
+                }
+            } header: {
+                Text("Forgotten files")
+            } footer: {
+                Text("Plus installers in Downloads for apps that are already installed.")
+            }
+            Section {
+                Toggle("Look for identical files", isOn: entryToggle("identical"))
+                Stepper(value: $model.identicalMinKB, in: 16...4096, step: 16) {
+                    LabeledContent("Skip files smaller than", value: "\(model.identicalMinKB) KB")
+                }
+                LabeledContent("Last checked") {
+                    HStack {
+                        Text(model.identicalDate.map { RelativeDate.string($0) } ?? "Never")
+                        Button(model.scanningIdentical ? "Checking…" : "Check Now") { model.startIdenticalScan() }
+                            .disabled(model.scanningIdentical)
+                    }
+                }
+            } header: {
+                Text("Identical files")
+            } footer: {
+                Text("Every file stays where it is. Copies share their disk space until one is edited. Checked once a day.")
             }
             Section("Full Disk Access") {
                 if model.hasFullDiskAccess {
@@ -111,6 +149,11 @@ struct ScanningSettings: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func entryToggle(_ id: String) -> Binding<Bool> {
+        Binding(get: { !model.disabledEntries.contains(id) },
+                set: { on in if on { model.disabledEntries.remove(id) } else { model.disabledEntries.insert(id) } })
     }
 
     private func chooseFolder() {
@@ -180,19 +223,121 @@ struct HistorySettings: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Every cleanup, with the space it actually freed.").foregroundStyle(.secondary)
-            if model.history.isEmpty {
-                ContentUnavailableView("No cleanups yet", systemImage: "clock",
-                                       description: Text("Cleanups you run from Headroom or the headroom command appear here."))
-            } else {
-                Table(model.history) {
-                    TableColumn("Date") { Text(RelativeDate.dateTime($0.date)) }.width(110)
-                    TableColumn("What was cleaned") { Text($0.items.joined(separator: ", ")).lineLimit(2) }
-                    TableColumn("Freed") { Text(ByteFormat.string($0.freed)).monospacedDigit() }.width(70)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Free space, last 30 days").font(.headline)
+                if let runway = model.runway {
+                    Text(runway.line).foregroundStyle(runway.daysLeft <= model.runwayDays ? Color.orange : Color.secondary)
+                }
+                FreeSpaceChart()
+                    .frame(height: 200)
+
+                Text("Every cleanup, with the space it actually freed.").foregroundStyle(.secondary).padding(.top, 8)
+                if model.history.isEmpty {
+                    ContentUnavailableView("No cleanups yet", systemImage: "clock",
+                                           description: Text("Cleanups you run from Headroom or the headroom command appear here."))
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(model.history) { entry in
+                            HistoryRow(entry: entry)
+                            Divider()
+                        }
+                    }
+                    .background(Color.primary.opacity(0.04), in: .rect(cornerRadius: 8))
                 }
             }
+            .padding()
         }
-        .padding()
+    }
+}
+
+struct HistoryRow: View {
+    @Environment(AppModel.self) private var model
+    let entry: HistoryEntry
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(RelativeDate.dateTime(entry.date)).frame(width: 110, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.items.joined(separator: ", ")).lineLimit(2)
+                if entry.putBack == true {
+                    Text("Put back").font(.callout).foregroundStyle(.secondary)
+                } else if model.canPutBack(entry) {
+                    Text("In the Bin until it is emptied").font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if model.canPutBack(entry) {
+                Button("Put Back") { model.putBack(entry) }.controlSize(.small)
+            }
+            Text(ByteFormat.string(entry.freed)).monospacedDigit().frame(width: 70, alignment: .trailing)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+    }
+}
+
+/// Hourly free space with the warning levels, each cleanup, and the projection when space is falling.
+struct FreeSpaceChart: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let now = Date()
+        let start = now.addingTimeInterval(-30 * 86400)
+        let samples = model.freeSamples.filter { $0.date >= start }
+        let cleanups = model.history.filter { $0.date >= start && $0.freed > 0 }
+        let runway = model.runway
+        let last = samples.last
+
+        if samples.count < 24 {
+            ContentUnavailableView("Not enough history yet", systemImage: "chart.xyaxis.line",
+                                   description: Text("Free space is recorded hourly. The trend appears after 3 days."))
+        } else {
+            Chart {
+                ForEach(samples, id: \.date) { sample in
+                    AreaMark(x: .value("Date", sample.date), y: .value("Free", gb(sample.available)))
+                        .foregroundStyle(Color.accentColor.opacity(0.18))
+                    LineMark(x: .value("Date", sample.date), y: .value("Free", gb(sample.available)))
+                        .foregroundStyle(Color.accentColor)
+                }
+                RuleMark(y: .value("Warning", model.warnGB))
+                    .foregroundStyle(.orange)
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    .annotation(position: .top, alignment: .leading) {
+                        Text("Warning \(model.warnGB) GB").font(.caption2).foregroundStyle(.orange)
+                    }
+                RuleMark(y: .value("Critical", model.criticalGB))
+                    .foregroundStyle(.red)
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    .annotation(position: .top, alignment: .leading) {
+                        Text("Critical \(model.criticalGB) GB").font(.caption2).foregroundStyle(.red)
+                    }
+                ForEach(cleanups) { entry in
+                    PointMark(x: .value("Date", entry.date), y: .value("Free", gb(nearest(entry.date, in: samples))))
+                        .foregroundStyle(.green)
+                        .annotation(position: .top) {
+                            Text("+\(ByteFormat.string(entry.freed))").font(.caption2).foregroundStyle(.green)
+                        }
+                }
+                if let runway, let last {
+                    let end = last.date.addingTimeInterval(Double(runway.daysLeft) * 86400)
+                    LineMark(x: .value("Date", last.date), y: .value("Projection", gb(last.available)), series: .value("Series", "Projection"))
+                        .foregroundStyle(.orange)
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                    LineMark(x: .value("Date", end), y: .value("Projection", 0), series: .value("Series", "Projection"))
+                        .foregroundStyle(.orange)
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                }
+            }
+            .chartYAxisLabel("GB free")
+            .chartYScale(domain: 0...max(Double(model.warnGB) * 1.4, (samples.map { gb($0.available) }.max() ?? 0) * 1.1))
+            .accessibilityLabel(runway?.line ?? "Free space over the last 30 days")
+        }
+    }
+
+    private func gb(_ bytes: Int64) -> Double { Double(bytes) / 1e9 }
+
+    private func nearest(_ date: Date, in samples: [FreeSample]) -> Int64 {
+        samples.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }?.available ?? 0
     }
 }

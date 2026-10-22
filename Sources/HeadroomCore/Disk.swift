@@ -13,6 +13,15 @@ public struct DiskStatus: Codable, Sendable, Equatable {
     public var used: Int64 { total - available }
     public var usedFraction: Double { total > 0 ? Double(used) / Double(total) : 0 }
 
+    /// Space the macOS system, preboot, recovery and swap volumes use in the same container.
+    /// statfs on the data volume reports the whole container, so this is what it counts beyond the data volume.
+    public static func otherVolumesBytes() -> Int64 {
+        var s = statfs()
+        guard statfs("/System/Volumes/Data", &s) == 0, let disk = current() else { return 0 }
+        let dataUsed = Int64(s.f_blocks - s.f_bfree) * Int64(s.f_bsize)
+        return max(0, disk.used - dataUsed)
+    }
+
     public static func current() -> DiskStatus? {
         for path in ["/System/Volumes/Data", "/"] {
             var s = statfs()
