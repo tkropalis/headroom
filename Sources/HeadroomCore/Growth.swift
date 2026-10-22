@@ -79,7 +79,7 @@ public enum GrowthTracker {
 
     /// A catalogue name when the folder is a known cache, else a short path.
     public static func displayName(_ path: String) -> String {
-        for entry in Catalog.builtIn {
+        for entry in Catalog.all {
             if case .paths(let paths) = entry.target, paths.map(Paths.expand).contains(path) { return entry.name }
         }
         return Paths.display(path)

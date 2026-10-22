@@ -13,6 +13,8 @@ struct PopoverView: View {
             case .cleaning: CleaningScreen()
             case .result: ResultScreen()
             case .growth(let alert): GrowthScreen(alert: alert)
+            case .helper: HelperScreen()
+            case .ask(let path): AskScreen(path: path)
             case .onboarding(let step): OnboardingScreen(step: step)
             }
         }
@@ -48,6 +50,12 @@ struct MainScreen: View {
             HeadroomHeader()
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
+
+            if model.notesOn, let note = model.summaryNote {
+                HelperNote(text: note)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+            }
 
             ForEach(model.visibleAlerts.prefix(2)) { alert in
                 GrowthRow(alert: alert)
@@ -229,6 +237,12 @@ struct GrowthRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(alert.headline).fontWeight(.semibold)
                 Text("Since \(RelativeDate.dateTime(alert.since)).").font(.callout).foregroundStyle(.secondary)
+                if let note = model.growthNotes[alert.path] {
+                    Text(note).font(.callout).foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .help(note)
+                }
             }
             Spacer(minLength: 4)
             Button("Review") { model.openGrowth(alert) }
@@ -370,6 +384,7 @@ struct Footer: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
+            MenuRow(title: "Ask \(Helper.name)…", shortcut: "") { model.screen = .helper }
             MenuRow(title: "Space Map…", shortcut: "") {
                 model.spaceMap.sidebar = .all
                 openWindow(id: "spacemap")

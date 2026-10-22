@@ -39,6 +39,7 @@ final class SpaceMapModel {
         AnyView(ContentUnavailableView("Nothing offloaded", systemImage: "externaldrive",
                                        description: Text("Things you offload to a drive or an archive appear here.")))
     }
+    @ObservationIgnored var claude = ClaudeHooks()
     @ObservationIgnored var hasFullDiskAccess: () -> Bool = { true }
     @ObservationIgnored var openFullDiskAccess: () -> Void = {}
 
@@ -169,6 +170,18 @@ final class SpaceMapModel {
             nodes = rows
         case .category(let name):
             nodes = SpaceTree.topLevel(snapshot: snapshot, category: name)
+        }
+    }
+
+    /// Opens the folder holding `path` and selects it once its contents are measured.
+    func reveal(_ path: String) {
+        sidebar = .all
+        forwardStack = []
+        stack = [(path as NSString).deletingLastPathComponent]
+        reload()
+        Task {
+            while measuring { try? await Task.sleep(for: .milliseconds(200)) }
+            selection = path
         }
     }
 
@@ -493,6 +506,14 @@ struct SpaceInspector: View {
             if let candidate {
                 Text(candidate.name)
                 Text(candidate.cost).foregroundStyle(.secondary)
+                if candidate.id.hasPrefix("learned:") {
+                    HStack {
+                        Text("Added from \(Helper.name)'s answer.").foregroundStyle(.secondary)
+                        Button("Take Off the List") { model.claude.setOnList(node.path, false) }
+                            .buttonStyle(.link)
+                    }
+                    .padding(.top, 2)
+                }
             } else {
                 Text(Self.knowledge(node.kind)).foregroundStyle(.secondary)
             }
@@ -502,6 +523,10 @@ struct SpaceInspector: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.primary.opacity(0.05), in: .rect(cornerRadius: 10))
+
+        if candidate == nil {
+            ClaudeAnswerView(node: node, hooks: model.claude)
+        }
 
         actions(node, candidate: candidate)
     }

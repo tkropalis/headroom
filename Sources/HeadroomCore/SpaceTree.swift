@@ -163,7 +163,7 @@ public enum SpaceTree {
     /// The folder is a cache the catalogue cleans, or holds what it cleans. "Your call"
     /// entries (games, VM images) aren't caches, so they keep their own kind.
     static func isCatalogued(_ path: String) -> Bool {
-        for entry in Catalog.builtIn where entry.level != .yourCall {
+        for entry in Catalog.all where entry.level != .yourCall {
             switch entry.target {
             case .paths(let list): if list.map(Paths.expand).contains(path) { return true }
             case .adminContents(let dir): if dir == path { return true }

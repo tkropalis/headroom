@@ -15,6 +15,12 @@ Commands:
   growth [--record]         Folders that grew fast; --record takes today's snapshot
   identical                 Look for identical files that could share their space
   trend                     How fast free space is falling, from the app's hourly record
+  summary                   \(Helper.name)'s short note on the disk, written by \(QuickNotes.model)
+  explain <path> [options]  Ask \(Helper.name) what a folder is and whether it can go
+      --show                Print what would be sent, and send nothing
+      --refresh             Ask again instead of using the saved answer
+      --add                 Add the answer to Headroom's cleanup list
+      --remove              Take it off the cleanup list
 
 Sizes are in decimal GB, like Finder.
 """
@@ -185,6 +191,66 @@ case "trend":
     guard let first = samples.first else { print("No free-space history yet. The app records it hourly."); break }
     print("\(samples.count) hourly readings since \(RelativeDate.dateTime(first.date)).")
     if let runway = Trend.runway(samples) { print(runway.line) } else { print("Free space isn't falling, or there are fewer than 3 days of readings.") }
+
+case "summary":
+    guard let disk = DiskStatus.current() else { fail("Couldn't read the disk.") }
+    let candidates = (Store.lastScan()?.candidates ?? []) + Scanner.identicalCandidates(Store.identicalGroups()?.groups ?? [])
+    let snapshots = Store.snapshots()
+    let alerts = snapshots.count >= 2
+        ? GrowthTracker.alerts(history: Array(snapshots.dropLast()), current: snapshots.last!, threshold: 5_000_000_000) : []
+    let input = QuickNotes.SummaryInput.make(disk: disk, candidates: candidates, snapshot: snapshots.last, warnGB: 20,
+                                             runway: Trend.runway(Store.freeSamples()), growth: alerts)
+    if flag("--show") { print(input.message); break }
+    do { print(try await QuickNotes.summary(input)) } catch { fail(error.localizedDescription) }
+
+case "explain":
+    let show = flag("--show")
+    let refresh = flag("--refresh")
+    let add = flag("--add")
+    let remove = flag("--remove")
+    guard let given = arguments.first else { fail("Usage: headroom explain <path> [--show] [--refresh] [--add | --remove]") }
+    let path = (Paths.expand(given) as NSString).standardizingPath.hasPrefix("/")
+        ? (Paths.expand(given) as NSString).standardizingPath
+        : (FileManager.default.currentDirectoryPath + "/" + given as NSString).standardizingPath
+    guard FileManager.default.fileExists(atPath: path) else { fail("\(given) doesn't exist.") }
+    if let reason = Explainer.privacyBlocker(path) { fail(reason) }
+    if show {
+        print("Headroom would send this to Anthropic for \(Helper.name) (\(ClaudeClient.model)), with web search allowed:\n")
+        print(await FolderFacts.gather(path: path).message)
+        break
+    }
+    let saved = Store.explanation(for: path)
+    if saved == nil || refresh { print("Asking \(Helper.name) about \(Paths.display(path))…") }
+    var answer: Explanation
+    do {
+        answer = try await Explainer.explain(path: path, refresh: refresh)
+    } catch {
+        fail(error.localizedDescription)
+    }
+    print("\n\(answer.name) · \(ByteFormat.string(answer.bytes)) · \(answer.verdict.title)")
+    print(answer.what)
+    if !answer.owner.isEmpty {
+        let installed = answer.appInstalled.map { $0 ? " (installed)" : " (not installed on this Mac)" } ?? ""
+        print("Made by \(answer.owner)\(installed).")
+    }
+    print("Removing it: \(answer.cost)")
+    if !answer.howToRemove.isEmpty { print("Better way: \(answer.howToRemove)") }
+    if answer.confidence != .high { print("\(Helper.name) is \(answer.confidence == .low ? "not sure" : "fairly sure") about this.") }
+    print("\nAnswer from \(answer.model), \(RelativeDate.dateTime(answer.askedAt)). Check before removing anything.")
+    if remove {
+        answer.confirmed = false
+        Store.saveExplanation(answer)
+        print("Taken off the cleanup list.")
+    } else if add {
+        guard answer.canConfirm else { fail("This one stays off the list: \(answer.verdict == .keep ? "\(Helper.name) says to leave it." : "Headroom never removes this folder.")") }
+        answer.confirmed = true
+        Store.saveExplanation(answer)
+        print("Added to the cleanup list. It shows in the next scan under \(answer.verdict.title), and goes to the Bin when cleaned.")
+    } else if answer.confirmed {
+        print("It's on the cleanup list.")
+    } else if answer.canConfirm {
+        print("Run again with --add to put it on the cleanup list.")
+    }
 
 case "help", "--help", "-h":
     print(usage)

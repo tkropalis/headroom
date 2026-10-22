@@ -20,6 +20,10 @@ enum MenuDisplay: String, CaseIterable, Identifiable {
 enum Screen: Equatable {
     case main, review, cleaning, result
     case growth(GrowthAlert)
+    /// Folders Headroom doesn't know, to ask Ollie about.
+    case helper
+    /// Ollie's answer about one folder.
+    case ask(String)
     /// First run, steps 1 to 3.
     case onboarding(Int)
 }
@@ -86,12 +90,15 @@ final class AppModel {
     var forgottenMonths: Int { didSet { defaults.set(forgottenMonths, forKey: "forgottenMonths") } }
     var identicalMinKB: Int { didSet { defaults.set(identicalMinKB, forKey: "identicalMinKB") } }
     var hasOnboarded: Bool { didSet { defaults.set(hasOnboarded, forKey: "hasOnboarded") } }
+    var claudeEnabled: Bool { didSet { defaults.set(claudeEnabled, forKey: "claudeEnabled"); refreshNotes() } }
+    var claudeAutoNotes: Bool { didSet { defaults.set(claudeAutoNotes, forKey: "claudeAutoNotes"); refreshNotes() } }
     @ObservationIgnored private var lastNotifiedLevel: HeadroomLevel = .ok
 
     init() {
         defaults.register(defaults: ["warnGB": 20, "criticalGB": 10, "growthGB": 5, "dailyScan": true,
                                      "menuDisplay": MenuDisplay.gigabytes.rawValue, "runwayDays": 7,
-                                     "forgottenMB": 500, "forgottenMonths": 6, "identicalMinKB": 100])
+                                     "forgottenMB": 500, "forgottenMonths": 6, "identicalMinKB": 100,
+                                     "claudeAutoNotes": true])
         warnGB = defaults.integer(forKey: "warnGB")
         criticalGB = defaults.integer(forKey: "criticalGB")
         growthGB = defaults.integer(forKey: "growthGB")
@@ -105,6 +112,8 @@ final class AppModel {
         identicalMinKB = defaults.integer(forKey: "identicalMinKB")
         // Someone who used v1 already has a scan; they don't need the welcome.
         hasOnboarded = defaults.bool(forKey: "hasOnboarded") || Store.lastScan() != nil
+        claudeEnabled = defaults.bool(forKey: "claudeEnabled")
+        claudeAutoNotes = defaults.bool(forKey: "claudeAutoNotes")
         dismissedAlerts = Set(defaults.stringArray(forKey: "dismissedAlerts") ?? [])
         lastNotifiedLevel = level
         loadGrowthAlerts()
@@ -203,6 +212,7 @@ final class AppModel {
             refreshProcesses()
             refreshDisk()
             scanning = false
+            refreshNotes()
             if Date().timeIntervalSince(identicalDate ?? .distantPast) > 24 * 3600 { startIdenticalScan() }
         }
     }
@@ -232,6 +242,7 @@ final class AppModel {
             return
         }
         if scan == nil || Date().timeIntervalSince(scan!.date) > 3600 { startScan() }
+        refreshNotes()
     }
 
     func finishOnboarding() {
@@ -386,6 +397,151 @@ final class AppModel {
         return SpaceTree.categories(snapshot: snapshot, disk: disk)
     }
 
+    // MARK: - Claude
+
+    var claudeKeyStored = ClaudeKey.isStored
+    var explanations: [Explanation] = Store.explanations()
+    var explaining: Set<String> = []
+    var explainErrors: [String: String] = [:]
+
+    var claudeReady: Bool { claudeEnabled && claudeKeyStored }
+    /// Ollie may send short notes without being asked.
+    var notesOn: Bool { claudeReady && claudeAutoNotes }
+
+    // Notes Ollie writes on its own, with Haiku.
+    var summaryNote: String?
+    var growthNotes: [String: String] = [:]
+    var guesses: [String: String] = [:]
+    @ObservationIgnored private var notesInFlight: Set<String> = []
+
+    /// Writes the summary and the growth notes if what they describe changed. Saved notes come back
+    /// without a request, so this is cheap to call whenever the popover opens or a scan ends.
+    func refreshNotes() {
+        guard notesOn else { summaryNote = nil; return }
+        if let disk, scan != nil, !notesInFlight.contains("summary") {
+            let input = QuickNotes.SummaryInput.make(disk: disk, candidates: allCandidates, snapshot: Store.snapshots().last,
+                                                     warnGB: warnGB, runway: runway, growth: visibleAlerts)
+            notesInFlight.insert("summary")
+            Task {
+                if let note = try? await QuickNotes.summary(input) { summaryNote = note }
+                notesInFlight.remove("summary")
+            }
+        }
+        for alert in visibleAlerts where growthNotes[alert.path] == nil && Explainer.privacyBlocker(alert.path) == nil {
+            let key = "growth:" + alert.path
+            guard !notesInFlight.contains(key) else { continue }
+            notesInFlight.insert(key)
+            Task {
+                let facts = await FolderFacts.gather(path: alert.path, bytes: alert.current)
+                if let note = try? await QuickNotes.growthReason(alert, children: facts.children) { growthNotes[alert.path] = note }
+                notesInFlight.remove(key)
+            }
+        }
+    }
+
+    /// First guesses for folders without a cleanup rule or an answer, asked together.
+    func requestGuesses(_ nodes: [SpaceNode]) {
+        let wanted = nodes.filter { node in
+            guesses[node.path] == nil && explanation(for: node.path) == nil && !notesInFlight.contains("guess:" + node.path)
+                && Explainer.privacyBlocker(node.path) == nil && node.path != SpaceMapModel.unmeasuredPath
+        }
+        for node in wanted { if let saved = QuickNotes.savedGuess(node.path) { guesses[node.path] = saved } }
+        let missing = wanted.filter { guesses[$0.path] == nil }
+        guard notesOn, !missing.isEmpty else { return }
+        missing.forEach { notesInFlight.insert("guess:" + $0.path) }
+        Task {
+            var facts: [FolderFacts] = []
+            for node in missing.prefix(8) { facts.append(await FolderFacts.gather(path: node.path, bytes: node.allocated)) }
+            if let found = try? await QuickNotes.guesses(facts) { guesses.merge(found) { _, new in new } }
+            missing.forEach { notesInFlight.remove("guess:" + $0.path) }
+        }
+    }
+
+    /// The largest folders from the last snapshot that Headroom has no cleanup rule for.
+    var unknownFolders: [SpaceNode] {
+        guard let snapshot = Store.snapshots().last else { return [] }
+        // Only "System and other": the named categories are folders Headroom already knows, and so
+        // are the system places it gives a descriptive name.
+        return SpaceTree.topLevel(snapshot: snapshot, category: SpaceTree.otherCategory).filter { node in
+            node.allocated >= 100_000_000 && (node.kind == nil || node.kind == .appData)
+                && (node.name == (node.path as NSString).lastPathComponent || node.path.hasPrefix("/Library/"))
+                && Explainer.privacyBlocker(node.path) == nil
+                && !allCandidates.contains { $0.paths.contains(node.path) || $0.projectPath == node.path }
+        }
+        .prefix(8).map { $0 }
+    }
+
+    /// Asks for any folder, picked in an Open panel.
+    func chooseFolderToAsk() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: Paths.home + "/Library")
+        panel.prompt = "Ask \(Helper.name)"
+        NSApp.activate()
+        if panel.runModal() == .OK, let url = panel.url { screen = .ask(url.path) }
+    }
+
+    var claudeHooks: ClaudeHooks {
+        ClaudeHooks(
+            ready: { [weak self] in self?.claudeReady ?? false },
+            answer: { [weak self] path in self?.explanation(for: path) },
+            asking: { [weak self] path in self?.explaining.contains(path) ?? false },
+            error: { [weak self] path in self?.explainErrors[path] },
+            ask: { [weak self] node, refresh in self?.explain(node, refresh: refresh) },
+            setOnList: { [weak self] path, on in self?.setOnList(path, on) },
+            guess: { [weak self] path in self?.guesses[path] },
+            requestGuess: { [weak self] node in self?.requestGuesses([node]) })
+    }
+
+    func explanation(for path: String) -> Explanation? { explanations.first { $0.path == path } }
+
+    /// Asks Claude about a Space Map row. Only runs when the person chooses Ask Claude.
+    func explain(_ node: SpaceNode, refresh: Bool = false) {
+        guard claudeReady, !explaining.contains(node.path) else { return }
+        explaining.insert(node.path)
+        explainErrors[node.path] = nil
+        Task {
+            do {
+                _ = try await Explainer.explain(path: node.path, bytes: node.allocated, refresh: refresh)
+            } catch {
+                explainErrors[node.path] = error.localizedDescription
+                if (error as? ClaudeError) == .noKey { claudeKeyStored = false }
+            }
+            explanations = Store.explanations()
+            explaining.remove(node.path)
+        }
+    }
+
+    /// Puts the folder on the cleanup list. Cleaning it still goes through the usual review.
+    func setOnList(_ path: String, _ on: Bool) {
+        guard var item = explanation(for: path), item.confirmed != on, !on || item.canConfirm else { return }
+        item.confirmed = on
+        Store.saveExplanation(item)
+        explanations = Store.explanations()
+        startScan()
+    }
+
+    func forgetExplanation(_ path: String) {
+        let wasOnList = explanation(for: path)?.confirmed == true
+        Store.removeExplanation(path)
+        explanations = Store.explanations()
+        if wasOnList { startScan() }
+    }
+
+    @discardableResult
+    func saveClaudeKey(_ key: String) -> Bool {
+        claudeKeyStored = ClaudeKey.save(key)
+        if claudeKeyStored { claudeEnabled = true }
+        return claudeKeyStored
+    }
+
+    func removeClaudeKey() {
+        ClaudeKey.delete()
+        claudeKeyStored = ClaudeKey.isStored
+    }
+
     // MARK: - Space Map
 
     private func configureSpaceMap() {
@@ -431,6 +587,7 @@ final class AppModel {
             }
         }
         map.offloadedView = { AnyView(OffloadedList()) }
+        map.claude = claudeHooks
         map.hasFullDiskAccess = { [weak self] in self?.hasFullDiskAccess ?? true }
         map.openFullDiskAccess = { [weak self] in self?.openFullDiskAccessSettings() }
     }

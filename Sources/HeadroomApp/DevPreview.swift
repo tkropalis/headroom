@@ -2,7 +2,7 @@ import AppKit
 import HeadroomCore
 import SwiftUI
 
-/// `Headroom --preview <main|review|review-identical|review-forgotten|result|growth|onboarding1…3|settings|history|spacemap|offload>` opens one screen in an ordinary window,
+/// `Headroom --preview <main|review|review-identical|review-forgotten|result|growth|onboarding1…3|settings|history|spacemap|spacemap:<path>|claude|offload>` opens one screen in an ordinary window,
 /// so it can be inspected or captured without clicking through the menu bar. Development only.
 @MainActor
 enum DevPreview {
@@ -30,6 +30,12 @@ enum DevPreview {
             }
             root = AnyView(HistorySettings().environment(model).frame(width: 620, height: 600))
         case "spacemap":
+            root = AnyView(SpaceMapView(model: model.spaceMap).environment(model).frame(width: 1000, height: 640))
+        case "claude":
+            root = AnyView(ClaudeSettings().environment(model).frame(width: 560, height: 680))
+        case let name where name.hasPrefix("spacemap:"):
+            // Opens the Space Map in a folder's parent with the folder selected, e.g. spacemap:~/Library/Caches/foo
+            model.spaceMap.reveal(Paths.expand(String(name.dropFirst("spacemap:".count))))
             root = AnyView(SpaceMapView(model: model.spaceMap).environment(model).frame(width: 1000, height: 640))
         case "offload":
             let item = OffloadItem(path: Paths.home + "/.android/avd/Pixel_7.avd", name: "Pixel_7", bytes: 3_100_000_000, quit: [])
@@ -63,6 +69,10 @@ enum DevPreview {
             model.openReview(.identical)
         case "review-forgotten":
             model.openReview(.forgotten)
+        case "helper":
+            model.screen = .helper
+        case let name where name.hasPrefix("ask:"):
+            model.screen = .ask(Paths.expand(String(name.dropFirst(4))))
         case "onboarding1", "onboarding2", "onboarding3":
             model.screen = .onboarding(Int(String(screen.last!))!)
         case "result":

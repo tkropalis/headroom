@@ -6,11 +6,12 @@ struct ScreenTitle: View {
     @Environment(AppModel.self) private var model
     let title: String
     var back = true
+    var backTo: Screen = .main
 
     var body: some View {
         HStack(spacing: 6) {
             if back {
-                Button { model.screen = .main } label: {
+                Button { model.screen = backTo } label: {
                     Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold))
                         .frame(width: 26, height: 26)
                         .contentShape(.rect)
@@ -345,10 +346,17 @@ struct GrowthScreen: View {
                         .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if let note = model.growthNotes[alert.path] {
+                    HelperNote(text: note)
+                }
                 let match = model.candidate(for: alert)
                 if let match {
                     Text("\(match.name): \(match.cost)").font(.callout)
                         .fixedSize(horizontal: false, vertical: true)
+                } else if Explainer.privacyBlocker(alert.path) == nil {
+                    ClaudeAnswerView(node: SpaceNode(path: alert.path, name: alert.name, allocated: alert.current,
+                                                     unshared: alert.current, isDirectory: true),
+                                     hooks: model.claudeHooks)
                 }
                 HStack(spacing: 8) {
                     Spacer()

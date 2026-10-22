@@ -12,6 +12,7 @@ struct SettingsView: View {
             Tab("Scanning", systemImage: "magnifyingglass") { ScanningSettings().frame(width: 560, height: 600) }
             Tab("Caches", systemImage: "list.bullet") { CacheSettings().frame(width: 560, height: 560) }
             Tab("History", systemImage: "clock.arrow.circlepath") { HistorySettings().frame(width: 620, height: 600) }
+            Tab(Helper.name, systemImage: "text.bubble") { ClaudeSettings().frame(width: 560, height: 680) }
         }
     }
 }

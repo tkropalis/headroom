@@ -26,6 +26,10 @@ headroom growth --record        # take today's folder-size snapshot
 headroom identical              # look for identical files that could share their space
 headroom clean --group identical  # share them; nothing is deleted
 headroom trend                  # how fast free space is falling
+headroom summary                # Ollie's short note on the disk (--show prints what would be sent)
+headroom explain <path> --show  # what would be sent to Ollie about a folder; sends nothing
+headroom explain <path>         # ask Ollie what it is (saved; --refresh asks again)
+headroom explain <path> --add   # put it on the cleanup list (--remove takes it off)
 ```
 
 ## How it works
@@ -38,6 +42,7 @@ headroom trend                  # how fast free space is falling
 - **Offload.** Copies an item to a drive (or an Apple Archive on drives without Mac metadata, or a compressed archive on this Mac), checks every file's SHA-256, and only then removes the original. Restore copies it back and checks it again.
 - **Trend.** The lowest free space of each hour is kept for 90 days. A straight-line fit over the last week, with cleanups taken out, gives the runway line and its notification.
 - **Space Map.** A window listing everything on the disk by size, from the daily snapshot, measured live as you drill in. What can't be measured is shown as its own row with the reason.
+- **Ollie.** Headroom's helper, built on Claude. Off until you turn it on in Settings, under Ollie. Its name is `Helper.name` in `Claude.swift`. With notes on, Ollie writes short notes on its own with `claude-haiku-5-5`: a summary at the top of the menu, why a folder grew, and a first guess at folders Headroom doesn't know (`QuickNotes.swift`, saved in `notes.json` under a hash of what was sent, so the same question is never sent twice). The summary gets totals by category and cleanup group and the names of catalogue items, never the names of your files, projects or personal folders. Detailed answers come from the menu's *Ask Ollie…* row or the Space Map, only for a folder you choose. For a detailed answer, Headroom sends the folder's path (home shown as `~`), size, dates and the names and sizes of the 25 largest items inside, never file contents, and never anything from Documents, Desktop, Downloads, Pictures, Movies, Music, iCloud Drive, Mail or Messages. The answer (what it is, which app makes it, a verdict and what removing it costs) comes from `claude-opus-5-5` with web search and structured output, over plain `URLSession` since there is no Swift SDK. Headroom then checks on the Mac whether the app is installed and finds its real bundle id. Answers are saved in `explanations.json`. One you add to the cleanup list becomes a catalogue entry that always goes to the Bin. The API key lives in the login Keychain (service `claude-api-key`, account `headroom`); `ANTHROPIC_API_KEY` overrides it for the command line.
 - **Put Back.** Items moved to the Bin remember where they came from, so the result screen and History can put them back.
 - **Safety.** Caches of running apps are cleaned only after the app quits, with your confirmation. Build folders of projects with a running dev server are skipped. A fixed list of folders (home, Library, Documents and others) can never be deleted, whatever the catalogue says.
 - **Data.** Settings live in the app's defaults. Scan results, snapshots and history are JSON in `~/Library/Application Support/Headroom`.
@@ -49,7 +54,9 @@ swift test                                  # core tests
 swift build --product HeadroomApp           # debug build of the app
 .build/debug/HeadroomApp --preview review   # open one screen in a window: main, main-alert, review, review-yourcall,
                                             # review-identical, review-forgotten, result, growth, onboarding1-3,
-                                            # settings, history, spacemap, offload
+                                            # settings, history, spacemap, offload, claude,
+                                            # spacemap:<path> (opens the Space Map with that item selected),
+                                            # helper, ask:<path>
 ```
 
 The app's build product is `HeadroomApp`, not `Headroom`: on a case-insensitive disk it would overwrite the `headroom` command.

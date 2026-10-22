@@ -54,7 +54,7 @@ public enum Scanner {
         // Resolve catalogue entries to the paths that exist now.
         var resolved: [(CatalogEntry, [String])] = []
         var probed: [String: ProbeResult] = [:]
-        for entry in Catalog.builtIn where !options.disabledEntries.contains(entry.id) {
+        for entry in Catalog.all where !options.disabledEntries.contains(entry.id) {
             if case .probe(let probe) = entry.target {
                 guard let found = DevLeftovers.run(probe) else { continue }
                 probed[entry.id] = found

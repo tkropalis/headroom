@@ -237,6 +237,6 @@ public enum Catalog {
     ]
 
     public static func entry(_ id: String) -> CatalogEntry? {
-        builtIn.first { $0.id == id }
+        all.first { $0.id == id }
     }
 }
