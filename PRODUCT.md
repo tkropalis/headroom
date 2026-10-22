@@ -37,6 +37,7 @@ Not a DaisyDisk-style sunburst as the main view. A sunburst is good for explorin
 3. **Never touch what is in use.** Caches of running apps and build folders of running dev servers are skipped and explained.
 4. **Quiet until it matters.** The default state is one number in the menu bar. Colour, alerts and badges appear only when something needs attention.
 5. **Name the cost.** Every cleanable item says what you lose by removing it: nothing, a slower next build, history, or an app.
+6. **Keep before delete.** When something is still wanted, offer a way to keep it and still get space back: share space between identical copies, offload it to a drive, or compress it. Deleting is one choice among these, not the only one.
 
 ## Accessibility & Inclusion
 

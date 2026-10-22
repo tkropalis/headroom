@@ -70,8 +70,73 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 </div>
 </div>
 
+
 <sc-if value="{{open}}" hint-placeholder-val="{{true}}">
 <div role="dialog" aria-label="Headroom" style="position: absolute; top: 40px; right: 128px; width: 352px; max-height: 728px; overflow-y: auto; box-sizing: border-box; border-radius: 20px; background: {{t.pop}}; backdrop-filter: blur({{t.blur}}) saturate(1.9); -webkit-backdrop-filter: blur({{t.blur}}) saturate(1.9); box-shadow: 0 20px 56px rgba(0,0,0,0.26), inset 0 1px 0 {{t.edge}}, inset 0 0 0 0.5px {{t.rim}}, 0 0 0 0.5px {{t.hair}}; padding: 14px 0 6px; display: flex; flex-direction: column">
+
+<sc-if value="{{isWelcome1}}" hint-placeholder-val="{{false}}">
+<div style="padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 12px; color: {{t.sec}}">1 of 3</span>
+<span style="font-size: 20px; font-weight: 600">Welcome to Headroom</span>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" style="flex: none; color: {{t.accent}}"><rect x="1.5" y="4" width="15" height="10" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.5"></rect><path d="M4.5 10.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+<span style="line-height: 1.4">Measures the folders on this Mac's disk and keeps one number in the menu bar.</span>
+</div>
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" style="flex: none; color: {{t.accent}}"><path d="M3.5 9.4 7.2 13 14.5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="line-height: 1.4">Cleans only what you confirm, and says what each item costs before you do.</span>
+</div>
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" style="flex: none; color: {{t.accent}}"><circle cx="9" cy="9" r="6.8" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M7 6.5v5M11 6.5v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+<span style="line-height: 1.4">Never touches what you are using: open apps and running dev servers are skipped.</span>
+</div>
+</div>
+<div style="display: flex; justify-content: flex-end; padding-top: 4px">
+<button type="button" onClick="{{toWelcome2}}" style="height: 28px; padding: 0 16px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500">Continue</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isWelcome2}}" hint-placeholder-val="{{false}}">
+<div style="padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 12px; color: {{t.sec}}">2 of 3</span>
+<span style="font-size: 20px; font-weight: 600">Full Disk Access</span>
+<span style="line-height: 1.45">With it, Headroom can measure every folder. Without it, Mail, Safari and some app data are skipped, so part of the disk goes uncounted.</span>
+<div style="padding: 10px 12px; border-radius: 10px; background: {{t.fill}}; display: flex; align-items: center; gap: 10px">
+<span style="flex: none; width: 10px; height: 10px; border-radius: 50%; background: {{fdaDot}}"></span>
+<span style="flex: 1">{{fdaLabel}}</span>
+</div>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">In Privacy Settings, turn on Headroom under Full Disk Access. This screen notices when you do.</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px">
+<sc-if value="{{fdaPending}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{toWelcome3}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}; font-size: 13px">Continue Without It</button>
+<button type="button" onClick="{{grantFda}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500">Open Privacy Settings…</button>
+</div>
+</sc-if>
+<sc-if value="{{fdaGranted}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{toWelcome3}}" style="height: 28px; padding: 0 16px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500">Continue</button>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isWelcome3}}" hint-placeholder-val="{{false}}">
+<div style="padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 12px; color: {{t.sec}}">3 of 3</span>
+<span style="font-size: 20px; font-weight: 600">Ready for the first scan</span>
+<span style="line-height: 1.45">The first scan takes about a minute. Free space shows at once; the rest fills in as folders are measured.</span>
+<div style="padding: 0 12px; min-height: 44px; border-radius: 10px; background: {{t.fill}}; display: flex; align-items: center; gap: 10px">
+<span style="flex: 1">Open Headroom at login</span>
+<button type="button" role="switch" aria-checked="{{login}}" aria-label="Open Headroom at login" onClick="{{toggleLogin}}" style="width: 38px; height: 22px; border: 0; border-radius: 11px; padding: 2px; background: {{loginTrack}}; display: flex; justify-content: {{loginAlign}}"><span style="width: 18px; height: 18px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.3)"></span></button>
+</div>
+<span style="font-size: 12px; color: {{t.sec}}">Scans only measure. Nothing is cleaned without you.</span>
+<div style="display: flex; justify-content: flex-end; padding-top: 4px">
+<button type="button" onClick="{{startFirstScan}}" style="height: 28px; padding: 0 16px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500">Start First Scan</button>
+</div>
+</div>
+</sc-if>
 
 <sc-if value="{{isMain}}" hint-placeholder-val="{{true}}">
 <div style="display: flex; flex-direction: column">
@@ -80,18 +145,26 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <span style="font-size: 26px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: {{bigColor}}">{{freeLabel}}</span>
 <span style="font-size: 15px; color: {{t.sec}}">free</span>
 </div>
-<div style="font-size: 12px; color: {{subColor}}; font-variant-numeric: tabular-nums">{{subLine}}</div>
-<div style="position: relative; height: 10px; border-radius: 5px; background: {{t.track}}; display: flex; overflow: hidden; margin-top: 4px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 12px; color: {{subColor}}; font-variant-numeric: tabular-nums">{{subLine}}</span>
+<sc-if value="{{showPurgeable}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">Plus 2 GB that macOS can free on its own.</span>
+</sc-if>
+<sc-if value="{{showRunway}}" hint-placeholder-val="{{false}}">
+<span style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: {{runwayColor}}; font-variant-numeric: tabular-nums"><svg aria-hidden="true" width="11" height="11" viewBox="0 0 11 11" style="flex: none"><path d="M1.5 2.5 5 6l1.8-1.8L9.5 7M9.5 4.2V7H6.7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{runwayLine}}</span>
+</sc-if>
+</div>
+<div aria-hidden="true" style="position: relative; height: 10px; border-radius: 5px; background: {{t.track}}; display: flex; overflow: hidden; margin-top: 4px">
 <sc-for list="{{segments}}" as="s" hint-placeholder-count="7">
-<span title="{{s.name}}" style="height: 100%; width: {{s.w}}; background: {{s.c}}; box-shadow: inset -1px 0 0 {{t.pop}}"></span>
+<a href="SpaceMap.dc.html" tabindex="-1" title="{{s.name}} {{s.label}}" style="display: block; height: 100%; width: {{s.w}}; background: {{s.c}}; box-shadow: inset -1px 0 0 {{t.pop}}"></a>
 </sc-for>
 </div>
 <div style="position: relative; height: 0">
 <span aria-hidden="true" style="position: absolute; top: -16px; left: {{tickLeft}}; width: 2px; height: 14px; border-radius: 1px; background: {{t.text}}; opacity: 0.55"></span>
 </div>
-<div style="display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: {{t.sec}}">
+<div style="display: flex; flex-wrap: wrap; gap: 2px 4px; margin: 0 -4px; font-size: 11px">
 <sc-for list="{{segments}}" as="s" hint-placeholder-count="7">
-<span style="display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{s.c}}"></span>{{s.name}} {{s.label}}</span>
+<a href="SpaceMap.dc.html" aria-label="{{s.name}} {{s.label}}, open in Space Map" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; border-radius: 5px; color: {{t.sec}}; text-decoration: none; font-variant-numeric: tabular-nums"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{s.c}}"></span>{{s.name}} {{s.label}}</a>
 </sc-for>
 </div>
 </div>
@@ -113,7 +186,9 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
 <span style="font-weight: 600">{{readyTitle}}</span>
 <span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{readyLine}}</span>
+<sc-if value="{{showIloHint}}" hint-placeholder-val="{{true}}">
 <span style="font-size: 12px; color: {{t.sec}}">1.7 GB more once the ilov2front dev server stops.</span>
+</sc-if>
 </div>
 <sc-if value="{{canReview}}" hint-placeholder-val="{{true}}">
 <button type="button" onClick="{{openReview}}" style="flex: none; height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{reviewBg}}; color: {{reviewColor}}; font-size: 13px; font-weight: 500">Review…</button>
@@ -123,16 +198,16 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <div style="height: 1px; background: {{t.sep}}; margin: 0 16px"></div>
 
 <div style="padding: 6px 6px; display: flex; flex-direction: column">
-<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
 <div style="display: flex; flex-direction: column">
-<button type="button" aria-expanded="{{g.open}}" onClick="{{g.toggle}}" style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 0; border-radius: 7px; background: {{g.rowBg}}; color: {{t.text}}; text-align: left">
+<button type="button" aria-expanded="{{g.open}}" onClick="{{g.toggle}}" style="min-height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 0; border-radius: 7px; background: {{g.rowBg}}; color: {{t.text}}; text-align: left">
 <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10" style="flex: none; transform: {{g.chev}}; transition: transform 160ms ease-out; color: {{t.sec}}"><path d="M3.5 1.8 6.7 5 3.5 8.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 <span style="flex: 1">{{g.title}}</span>
 <span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{g.size}}</span>
 </button>
 <sc-if value="{{g.open}}" hint-placeholder-val="{{false}}">
 <div style="padding: 2px 10px 8px 28px; display: flex; flex-direction: column; gap: 8px">
-<span style="font-size: 12px; color: {{t.sec}}">{{g.note}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">{{g.note}}</span>
 <sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
 <div style="display: flex; gap: 10px">
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
@@ -142,6 +217,11 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <span style="flex: none; font-size: 12px; font-variant-numeric: tabular-nums">{{it.size}}</span>
 </div>
 </sc-for>
+<sc-if value="{{g.canReview}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; justify-content: flex-end">
+<button type="button" onClick="{{g.review}}" style="height: 24px; padding: 0 12px; border: 0; border-radius: 12px; background: {{t.btn}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Review…</button>
+</div>
+</sc-if>
 </div>
 </sc-if>
 </div>
@@ -151,10 +231,11 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <div style="height: 1px; background: {{t.sep}}; margin: 0 16px"></div>
 
 <div style="padding: 10px 16px 6px; display: flex; align-items: center; justify-content: space-between">
-<span style="font-size: 12px; color: {{t.sec}}">{{scanLine}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{scanLine}}</span>
 <button type="button" onClick="{{scanNow}}" style="height: 24px; padding: 0 10px; border: 0; border-radius: 12px; background: {{t.btn}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Scan Now</button>
 </div>
 <div style="padding: 0 6px; display: flex; flex-direction: column">
+<a href="SpaceMap.dc.html" style="height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-radius: 7px; color: {{t.text}}; text-decoration: none">Space Map…</a>
 <a href="Settings.dc.html" style="height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-radius: 7px; color: {{t.text}}; text-decoration: none">Settings…<span style="color: {{t.sec}}">⌘,</span></a>
 <button type="button" style="height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: {{t.text}}; text-align: left">Quit Headroom<span style="color: {{t.sec}}">⌘Q</span></button>
 </div>
@@ -165,9 +246,9 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <div style="display: flex; flex-direction: column">
 <div style="padding: 0 10px 10px; display: flex; align-items: center; gap: 6px">
 <button type="button" aria-label="Back" onClick="{{goMain}}" style="width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: {{t.text}}"><svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12"><path d="M7 1.5 2.5 6 7 10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-<span style="font-size: 15px; font-weight: 600">Review cleanup</span>
+<span style="font-size: 15px; font-weight: 600">{{reviewTitle}}</span>
 </div>
-<div style="padding: 0 16px 8px; font-size: 12px; color: {{t.sec}}">Nothing is removed until you confirm below.</div>
+<div style="padding: 0 16px 8px; font-size: 12px; color: {{t.sec}}; line-height: 1.4">{{reviewNote}}</div>
 <div style="padding: 0 6px; display: flex; flex-direction: column">
 <sc-for list="{{items}}" as="item" hint-placeholder-count="6">
 <label for="cb-{{item.id}}" style="display: flex; gap: 10px; padding: 8px 10px; border-radius: 8px; opacity: {{item.opacity}}">
@@ -182,7 +263,10 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 </label>
 </sc-for>
 </div>
-<div style="height: 1px; background: {{t.sep}}; margin: 6px 16px 0"></div>
+<sc-if value="{{showShareCost}}" hint-placeholder-val="{{false}}">
+<div style="margin: 6px 16px 0; padding: 10px 12px; border-radius: 10px; background: {{t.fill}}; font-size: 12px; line-height: 1.4">Git and Time Machine see these files as changed once: git rechecks them, and the next backup copies them again.</div>
+</sc-if>
+<div style="height: 1px; background: {{t.sep}}; margin: 8px 16px 0"></div>
 <div style="padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 10px">
 <span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{selLine}}</span>
 <div style="display: flex; gap: 8px; justify-content: flex-end">
@@ -217,7 +301,7 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 
 <sc-if value="{{isCleaning}}" hint-placeholder-val="{{false}}">
 <div style="display: flex; flex-direction: column">
-<div style="padding: 0 16px 10px; font-size: 15px; font-weight: 600">Cleaning…</div>
+<div style="padding: 0 16px 10px; font-size: 15px; font-weight: 600">{{cleaningTitle}}</div>
 <div style="padding: 0 16px; display: flex; flex-direction: column; gap: 10px">
 <sc-for list="{{progress}}" as="p" hint-placeholder-count="4">
 <div style="display: flex; align-items: center; gap: 10px">
@@ -238,12 +322,29 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 <sc-if value="{{isResult}}" hint-placeholder-val="{{false}}">
 <div style="display: flex; flex-direction: column">
 <div style="padding: 0 16px 12px; display: flex; flex-direction: column; gap: 4px">
-<span style="font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums">Freed {{lastFreedLabel}}</span>
-<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{freeLabel}} free now · measured from free space before and after</span>
+<span style="font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums">{{resultTitle}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums; line-height: 1.4">{{resultSub}}</span>
 </div>
+<sc-if value="{{showDrain}}" hint-placeholder-val="{{true}}">
+<div style="padding: 0 16px 14px; display: flex; flex-direction: column; gap: 6px">
+<div aria-hidden="true" style="height: 10px; border-radius: 5px; background: {{t.track}}; display: flex; overflow: hidden">
+<sc-for list="{{segments}}" as="s" hint-placeholder-count="7">
+<span style="height: 100%; width: {{s.w}}; background: {{s.c}}; box-shadow: inset -1px 0 0 {{t.pop}}"></span>
+</sc-for>
+<span style="height: 100%; width: {{drainW}}; background: {{t.greenFill}}; transform: {{drainScale}}; transform-origin: left center; transition: {{drainTransition}}"></span>
+</div>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{freeShownLabel}} free</span>
+</div>
+</sc-if>
 <div style="padding: 0 16px; display: flex; flex-direction: column; gap: 8px">
 <sc-for list="{{doneItems}}" as="d" hint-placeholder-count="4">
-<div style="display: flex; gap: 10px; font-variant-numeric: tabular-nums"><span style="flex: 1; min-width: 0">{{d.name}}</span><span style="color: {{t.green}}">{{d.label}}</span></div>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 24px; font-variant-numeric: tabular-nums">
+<span style="flex: 1; min-width: 0">{{d.name}}</span>
+<span style="color: {{d.labelColor}}">{{d.label}}</span>
+<sc-if value="{{d.canPutBack}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{d.putBack}}" style="flex: none; height: 24px; padding: 0 10px; border: 0; border-radius: 12px; background: {{t.btn}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Put Back</button>
+</sc-if>
+</div>
 </sc-for>
 </div>
 <div style="padding: 14px 16px 8px; display: flex; justify-content: flex-end">
@@ -256,52 +357,85 @@ button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);
 </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"scenario":{"editor":"enum","options":["Healthy","Low","Critical","Growth alert"],"default":"Healthy"},"appearance":{"editor":"enum","options":["Light","Dark"],"default":"Light"},"reduceTransparency":{"editor":"boolean","default":false},"$preview":{"width":1000,"height":780}}'>
+<script type="text/x-dc" data-dc-script data-props='{"scenario":{"editor":"enum","options":["Healthy","Low","Critical","Growth alert","First run"],"default":"Healthy"},"trend":{"editor":"enum","options":["Steady","Falling"],"default":"Falling"},"appearance":{"editor":"enum","options":["Light","Dark"],"default":"Light"},"reduceTransparency":{"editor":"boolean","default":false},"$preview":{"width":1000,"height":780}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);
     this.state = {
-      open: true, screen: 'main', expanded: '',
-      sel: { npm: true, spotify: true, oikos: true, metro: true, vscode: false },
-      queue: [], step: 0, freed: 0, lastFreed: 0, doneItems: [],
-      cleaned: false, alertDone: false, scanned: '12 min ago'
+      open: true, screen: (props.scenario === 'First run') ? 'welcome1' : 'main', expanded: '',
+      mode: 'caches', sel: {},
+      queue: [], step: 0, freed: 0, lastFreed: 0, doneItems: [], putBack: {},
+      cleaned: false, shared: false, binned: false, alertDone: false, scanned: '12 min ago',
+      fda: 'off', login: true, scanning: false, scanCount: 0,
+      drained: true, countP: 1, reduce: false
     };
   }
-  componentWillUnmount() { clearInterval(this.timer); }
+  componentDidUpdate(prev) {
+    if (prev.scenario !== this.props.scenario) {
+      this.setState({ screen: this.props.scenario === 'First run' ? 'welcome1' : 'main', fda: 'off', scanning: false });
+    }
+  }
+  componentWillUnmount() { clearInterval(this.timer); clearInterval(this.countTimer); clearInterval(this.scanTimer); clearTimeout(this.fdaTimer); }
 
   runClean(queue, mode) {
     clearInterval(this.timer);
-    this.setState({ screen: 'cleaning', queue: queue, step: 0 });
+    this.setState({ screen: 'cleaning', queue: queue, step: 0, mode: mode });
     this.timer = setInterval(() => {
-      this.setState((s) => {
-        const step = s.step + 1;
-        if (step < s.queue.length) return { step: step };
-        clearInterval(this.timer);
-        return this.finish(s, s.queue, mode);
-      });
+      const s = this.state;
+      if (s.step + 1 < s.queue.length) { this.setState({ step: s.step + 1 }); return; }
+      clearInterval(this.timer);
+      this.setState(this.finish(s, s.queue, mode));
+      this.startDrain();
     }, 700);
   }
   finish(s, done, mode) {
-    const total = done.reduce((a, i) => a + i.measured, 0);
+    const total = done.filter((i) => !i.bin).reduce((a, i) => a + i.measured, 0);
     return {
-      step: done.length, screen: 'result', doneItems: done,
+      step: done.length, screen: 'result', doneItems: done, putBack: {},
       freed: s.freed + total, lastFreed: total,
       cleaned: s.cleaned || mode === 'caches',
+      shared: s.shared || mode === 'share',
+      binned: s.binned || mode === 'forgotten',
       alertDone: s.alertDone || mode === 'growth',
-      sel: mode === 'caches' ? {} : s.sel
+      sel: {}
     };
+  }
+  startDrain() {
+    clearInterval(this.countTimer);
+    const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.setState({ drained: false, countP: 0, reduce: reduce });
+    setTimeout(() => {
+      if (reduce) { this.setState({ drained: true, countP: 1 }); return; }
+      const t0 = Date.now();
+      this.setState({ drained: true });
+      this.countTimer = setInterval(() => {
+        const p = Math.min(1, (Date.now() - t0) / 450);
+        this.setState({ countP: 1 - Math.pow(1 - p, 3) });
+        if (p >= 1) clearInterval(this.countTimer);
+      }, 30);
+    }, 160);
+  }
+  startScan() {
+    clearInterval(this.scanTimer);
+    this.setState({ screen: 'main', scanning: true, scanCount: 0 });
+    this.scanTimer = setInterval(() => {
+      const n = this.state.scanCount + 173;
+      if (n >= 2427) { clearInterval(this.scanTimer); this.setState({ scanning: false, scanCount: 2427, scanned: 'just now' }); return; }
+      this.setState({ scanCount: n });
+    }, 140);
   }
 
   renderVals() {
     const dark = (this.props.appearance ?? 'Light') === 'Dark';
     const scenario = this.props.scenario ?? 'Healthy';
+    const falling = (this.props.trend ?? 'Falling') === 'Falling';
     const t = dark ? {
       wall: '#141c2b', blob1: '#2d5aa8', blob2: '#1d7a72', blob3: '#8a3f6a', blob4: '#9a6a22',
       menubar: 'rgba(20,20,26,0.22)', menuText: '#f5f5f7', window: '#1e1f22', windowBar: '#2a2b2f', codeLine: 'rgba(255,255,255,0.12)',
       pop: 'rgba(32,32,38,0.48)', popSolid: '#26262b', blur: '40px', edge: 'rgba(255,255,255,0.22)', rim: 'rgba(255,255,255,0.14)',
       text: '#f5f5f7', sec: '#c4c4cb', hair: 'rgba(0,0,0,0.4)', sep: 'rgba(255,255,255,0.12)',
       fill: 'rgba(255,255,255,0.08)', btn: 'rgba(255,255,255,0.14)', accent: '#2570dc', onAccent: '#ffffff',
-      green: '#4ade72', orange: '#ffb340', orangeTint: 'rgba(255,159,10,0.18)', red: '#ff6b61', track: 'rgba(255,255,255,0.14)',
+      green: '#4ade72', greenFill: '#34c759', orange: '#ffb340', orangeTint: 'rgba(255,159,10,0.18)', red: '#ff6b61', track: 'rgba(255,255,255,0.14)',
       itemActive: 'rgba(255,255,255,0.2)', rowActive: 'rgba(255,255,255,0.08)', other: '#6a6a72', macos: '#9a9aa0'
     } : {
       wall: '#9db3cd', blob1: '#5b8def', blob2: '#3fb8a9', blob3: '#ef8fa8', blob4: '#f2b45a',
@@ -309,17 +443,18 @@ class Component extends DCLogic {
       pop: 'rgba(248,248,252,0.52)', popSolid: '#f2f2f5', blur: '40px', edge: 'rgba(255,255,255,0.85)', rim: 'rgba(255,255,255,0.5)',
       text: '#111114', sec: '#3d3d45', hair: 'rgba(0,0,0,0.12)', sep: 'rgba(0,0,0,0.1)',
       fill: 'rgba(255,255,255,0.4)', btn: 'rgba(255,255,255,0.55)', accent: '#2570dc', onAccent: '#ffffff',
-      green: '#16692c', orange: '#9a4700', orangeTint: 'rgba(255,170,60,0.28)', red: '#b0001a', track: 'rgba(0,0,0,0.1)',
+      green: '#16692c', greenFill: '#30b14f', orange: '#9a4700', orangeTint: 'rgba(255,170,60,0.28)', red: '#b0001a', track: 'rgba(0,0,0,0.1)',
       itemActive: 'rgba(255,255,255,0.45)', rowActive: 'rgba(255,255,255,0.35)', other: '#d4d4da', macos: '#8e8e93'
     };
     if (this.props.reduceTransparency) { t.pop = t.popSolid; t.blur = '0px'; t.menubar = dark ? '#1c1c20' : '#e8e8ec'; }
-    const CAP = 245, WARN = 20, CRIT = 10;
-    const base = { 'Healthy': 29, 'Low': 14, 'Critical': 6, 'Growth alert': 29 }[scenario] ?? 29;
-    const free = base + this.state.freed;
+    const CAP = 245, WARN = 20, CRIT = 10, RATE = 1.4;
+    const base = { 'Healthy': 29, 'Low': 14, 'Critical': 6, 'Growth alert': 29, 'First run': 18 }[scenario] ?? 29;
+    const s = this.state;
+    const free = base + s.freed;
     const fmt = (g) => g >= 10 ? Math.round(g) + ' GB' : g >= 1 ? g.toFixed(1) + ' GB' : Math.round(g * 1000) + ' MB';
     const level = free < CRIT ? 'critical' : free < WARN ? 'low' : 'ok';
-    const s = this.state;
     const go = (screen) => () => this.setState({ screen: screen });
+    const runwayDays = Math.max(1, Math.round(free / RATE));
 
     const fixed = [
       { name: 'macOS', gb: 56, c: t.macos }, { name: 'Developer', gb: 39, c: '#3b82d6' },
@@ -332,28 +467,51 @@ class Component extends DCLogic {
       name: x.name, c: x.c, label: fmt(x.gb), w: (x.gb / CAP * 100).toFixed(2) + '%'
     }));
 
-    const ITEMS = [
-      { id: 'npm', name: 'npm download cache', gb: 0.9, measured: 0.9, cost: 'Nothing lost. npm downloads packages again when needed.' },
-      { id: 'spotify', name: 'Spotify cache', gb: 0.6, measured: 0.55, cost: 'Nothing lost. Streamed songs load again.', quit: 'Spotify', blocker: 'Spotify is open. Headroom will quit it first.' },
-      { id: 'oikos', name: 'oikos build cache', gb: 0.6, measured: 0.58, cost: 'The next dev start in oikos is slower once.' },
-      { id: 'metro', name: 'Metro bundler cache', gb: 0.2, measured: 0.19, cost: 'Nothing lost. Rebuilt on the next Expo start.' },
-      { id: 'vscode', name: 'VS Code caches and logs', gb: 0.3, measured: 0.28, cost: 'Nothing lost. Settings and extensions stay.', quit: 'VS Code', blocker: 'VS Code is open. Tick to quit it and clean.' },
+    const READY = [
+      { id: 'npm', name: 'npm download cache', gb: 0.9, measured: 0.9, cost: 'Nothing lost. npm downloads packages again when needed.', on: true },
+      { id: 'spotify', name: 'Spotify cache', gb: 0.6, measured: 0.55, cost: 'Nothing lost. Streamed songs load again.', quit: 'Spotify', blocker: 'Spotify is open. Headroom will quit it first.', on: true },
+      { id: 'oikos', name: 'oikos build cache', gb: 0.6, measured: 0.58, cost: 'The next dev start in oikos is slower once.', on: true },
+      { id: 'pnpm', name: 'pnpm store, unreferenced packages', gb: 0.39, measured: 0.36, sizeLabel: 'up to 388 MB', cost: 'Nothing lost. pnpm downloads them again when needed.', on: true },
+      { id: 'metro', name: 'Metro bundler cache', gb: 0.2, measured: 0.19, cost: 'Nothing lost. Rebuilt on the next Expo start.', on: true },
+      { id: 'vscode', name: 'VS Code caches and logs', gb: 0.3, measured: 0.28, cost: 'Nothing lost. Settings and extensions stay.', quit: 'VS Code', blocker: 'VS Code is open. Tick to quit it and clean.', showBlocker: true },
       { id: 'ilo', name: 'ilov2front build cache', gb: 1.7, measured: 0, cost: 'The next dev start is slower once.', disabled: true, blocker: 'The ilov2front dev server is running. Stop it to clean this.' }
     ];
-    const available = s.cleaned ? [] : ITEMS;
-    const chosen = available.filter((i) => !i.disabled && s.sel[i.id]);
+    const SHARE = [
+      { id: 'rn', name: 'react-native 0.81', cost: '6 identical copies across projects', gb: 1.2, measured: 1.15, on: true },
+      { id: 'expo', name: 'Expo and Metro packages', cost: '5 identical copies across projects', gb: 0.9, measured: 0.86, on: true },
+      { id: 'next', name: 'next 15.5', cost: '4 identical copies across projects', gb: 0.7, measured: 0.66, on: true },
+      { id: 'rec', name: 'Demo recording 4 Mar.mov', cost: 'In Downloads and on the Desktop', gb: 0.64, measured: 0.64, on: true },
+      { id: 'ilo2', name: 'ilov2front packages', cost: '3 copies', gb: 0.4, measured: 0, disabled: true, blocker: 'The ilov2front dev server is running, so its files are skipped.' }
+    ];
+    const FORGOT = [
+      { id: 'demo', name: 'Demo recording 2026-03-04.mov', cost: 'Desktop · not opened since 4 March', gb: 1.6, measured: 0, bin: true, on: true },
+      { id: 'as', name: 'android-studio-2025.3.dmg', cost: 'Downloads · installer; Android Studio is installed', gb: 1.2, measured: 0, bin: true, on: true },
+      { id: 'sql', name: 'db-backup-2025-12.sql', cost: 'Documents · not opened since 9 January', gb: 0.78, measured: 0, bin: true, on: true },
+      { id: 'fig', name: 'Figma assets.zip', cost: 'Downloads · not opened since 2 April', gb: 0.52, measured: 0, bin: true, on: true }
+    ];
+    const SETS = { caches: READY, share: SHARE, forgotten: FORGOT };
+    const mode = s.mode;
+    const list = SETS[mode] || READY;
+    const isSel = (i) => s.sel[i.id] === undefined ? !!i.on : s.sel[i.id];
+    const chosen = list.filter((i) => !i.disabled && isSel(i));
     const selGb = chosen.reduce((a, i) => a + i.gb, 0);
     const quits = chosen.filter((i) => i.quit).map((i) => i.quit);
-    const items = available.map((i) => ({
-      id: i.id, name: i.name, cost: i.cost, sizeLabel: fmt(i.gb),
-      checked: !i.disabled && !!s.sel[i.id], disabled: !!i.disabled,
+    const items = list.map((i) => ({
+      id: i.id, name: i.name, cost: i.cost, sizeLabel: i.sizeLabel || fmt(i.gb),
+      checked: !i.disabled && isSel(i), disabled: !!i.disabled,
       opacity: i.disabled ? '0.6' : '1',
-      hasBlocker: !!i.blocker && (i.disabled || !!s.sel[i.id] || i.id === 'vscode'),
+      hasBlocker: !!i.blocker && (i.disabled || isSel(i) || !!i.showBlocker),
       blocker: i.blocker, blockerColor: i.disabled ? t.sec : t.orange,
-      toggle: () => this.setState((st) => ({ sel: Object.assign({}, st.sel, { [i.id]: !st.sel[i.id] }) }))
+      toggle: () => this.setState((st) => ({ sel: Object.assign({}, st.sel, { [i.id]: !isSel(i) }) }))
     }));
-    const defaultReady = ITEMS.filter((i) => ['npm', 'spotify', 'oikos', 'metro'].indexOf(i.id) >= 0);
-    const readyGb = defaultReady.reduce((a, i) => a + i.gb, 0);
+    const openSet = (m) => () => this.setState({ screen: 'review', mode: m, sel: {} });
+    const readyDefault = READY.filter((i) => i.on);
+    const readyGb = readyDefault.reduce((a, i) => a + i.gb, 0);
+    const confirmLabel = chosen.length === 0
+      ? (mode === 'share' ? 'Share space' : mode === 'forgotten' ? 'Move to Bin' : 'Clean')
+      : mode === 'share' ? 'Share space, ' + fmt(selGb)
+      : mode === 'forgotten' ? 'Move ' + fmt(selGb) + ' to the Bin'
+      : (quits.length ? 'Quit ' + quits.join(' and ') + ' and clean ' : 'Clean ') + fmt(selGb);
 
     const GROUPS = [
       { id: 'rebuild', title: 'Rebuilds on use', size: 'up to 35 GB', note: 'Nothing is lost, but the next build or launch is slower.', items: [
@@ -361,20 +519,33 @@ class Component extends DCLogic {
         { name: 'Gradle caches', size: '8.8 GB', cost: 'The next Android build downloads what it needs.' },
         { name: 'iOS Simulator caches', size: '3.2 GB', cost: 'Needs your password. First boot is slower.' },
         { name: 'Old VS Code workspace data', size: 'up to 2.1 GB', cost: 'Folders not opened in 60 days lose open tabs.' } ] },
-      { id: 'call', title: 'Your call', size: 'up to 20 GB', note: 'Each of these loses something. Removed items go to the Bin.', items: [
+      { id: 'call', title: 'Your call', size: 'up to 26 GB', note: 'Each of these loses something. Removed items go to the Bin where they can.', items: [
         { name: 'Claude VM image', size: '9.3 GB', cost: 'Downloads again when Claude next needs it.' },
-        { name: 'Games', size: '4.6 GB', cost: 'Minecraft, Steam and Paradox data, saves included.' },
-        { name: 'MAMP', size: '3.2 GB', cost: 'Export its databases first.' },
-        { name: 'Claude Code history over 60 days', size: 'up to 2.7 GB', cost: 'Old sessions can no longer be resumed.' } ] },
-      { id: 'dormant', title: 'Dormant projects', size: '1.2 GB · 3', note: 'No commit or edit in 90 days. The code stays; dependencies reinstall.', items: [
+        { name: 'Games', size: '4.6 GB', cost: 'Minecraft, Steam and Paradox data, saves included. Offload keeps them.' },
+        { name: 'MAMP', size: '3.2 GB', cost: 'Export its databases first, or offload it.' },
+        { name: 'Android emulator Pixel_7', size: '3.1 GB', cost: 'Not started in 74 days. Its apps, data and snapshots go. Offload keeps it.' },
+        { name: 'Claude Code history over 60 days', size: 'up to 2.7 GB', cost: 'Old sessions can no longer be resumed.' },
+        { name: 'iOS simulators not booted in 90 days', size: '2.2 GB · 9', cost: 'Test apps and their data. Can’t be put back.' },
+        { name: 'Xcode archives over a year old', size: '553 MB', cost: 'Newest per app kept. Older builds can’t symbolicate crashes.' } ] },
+      { id: 'share', title: 'Identical files', size: s.shared ? 'shared' : '3.4 GB · nothing deleted', note: 'Copies of the same file share their disk space. Every file stays where it is and opens as before.', review: openSet('share'), items: s.shared ? [] : [
+        { name: 'react-native 0.81', size: '1.2 GB', cost: '6 copies across projects' },
+        { name: 'Expo and Metro packages', size: '900 MB', cost: '5 copies across projects' },
+        { name: 'next 15.5 and 1 more set', size: '1.3 GB', cost: 'Projects, Downloads and Desktop' } ] },
+      { id: 'forgot', title: 'Forgotten files', size: s.binned ? 'in the Bin' : '4.1 GB · 4', note: 'Over 500 MB and not opened for 6 months, plus installers for apps you already have. They go to the Bin.', review: openSet('forgotten'), items: s.binned ? [] : [
+        { name: 'Demo recording 2026-03-04.mov', size: '1.6 GB', cost: 'Desktop · not opened since 4 March' },
+        { name: 'android-studio-2025.3.dmg', size: '1.2 GB', cost: 'Downloads · Android Studio is installed' },
+        { name: '2 more files', size: '1.3 GB', cost: 'Documents and Downloads' } ] },
+      { id: 'dormant', title: 'Dormant projects', size: '1.2 GB · 3', note: 'No commit or edit in 90 days. The code stays; dependencies reinstall. Offload moves the whole project.', items: [
         { name: 'nexus', size: '570 MB', cost: '.venv · last commit 7 Apr' },
         { name: 'ergazomenos', size: '320 MB', cost: 'node_modules and vendor · last commit 13 Jul' },
         { name: 'job-agent', size: '280 MB', cost: '.venv · last edit 28 Aug, no git' } ] }
     ];
     const groups = GROUPS.map((g) => {
       const isOpen = s.expanded === g.id;
+      const done = (g.id === 'share' && s.shared) || (g.id === 'forgot' && s.binned);
       return {
-        title: g.title, size: g.size, note: g.note, items: g.items, open: isOpen,
+        title: g.title, size: s.scanning ? 'Measuring…' : g.size, note: done ? (g.id === 'share' ? 'All identical copies already share their space.' : 'Moved to the Bin. Empty the Bin to free the space.') : g.note,
+        items: g.items, open: isOpen, canReview: !!g.review && !done && !s.scanning, review: g.review,
         chev: isOpen ? 'rotate(90deg)' : 'none', rowBg: isOpen ? t.rowActive : 'transparent',
         toggle: () => this.setState((st) => ({ expanded: st.expanded === g.id ? '' : g.id }))
       };
@@ -385,11 +556,15 @@ class Component extends DCLogic {
       const cur = idx === s.step;
       return {
         name: q.name, done: done,
-        status: done ? fmt(q.measured) : cur ? 'Cleaning…' : 'Waiting',
+        status: done ? (q.bin ? 'In the Bin' : fmt(q.measured)) : cur ? (s.mode === 'share' ? 'Sharing…' : s.mode === 'forgotten' ? 'Moving…' : 'Cleaning…') : 'Waiting',
         statusColor: done ? t.green : t.sec,
         dotBg: done ? t.green : cur ? t.accent : t.track
       };
     });
+
+    const binMode = s.mode === 'forgotten';
+    const binGb = s.doneItems.filter((d) => d.bin && !s.putBack[d.id]).reduce((a, d) => a + d.gb, 0);
+    const drainPct = (s.lastFreed / CAP * 100).toFixed(2) + '%';
 
     return {
       t: t,
@@ -400,6 +575,15 @@ class Component extends DCLogic {
       menuItemColor: level === 'critical' ? t.red : t.menuText,
       showDot: level !== 'ok',
       dotColor: level === 'critical' ? t.red : t.orange,
+      isWelcome1: s.screen === 'welcome1', isWelcome2: s.screen === 'welcome2', isWelcome3: s.screen === 'welcome3',
+      toWelcome2: go('welcome2'), toWelcome3: go('welcome3'),
+      fdaPending: s.fda !== 'granted', fdaGranted: s.fda === 'granted',
+      fdaDot: s.fda === 'granted' ? t.greenFill : s.fda === 'checking' ? t.accent : t.orange,
+      fdaLabel: s.fda === 'granted' ? 'Granted. Every folder can be measured.' : s.fda === 'checking' ? 'Waiting for you to turn it on…' : 'Off',
+      grantFda: () => { this.setState({ fda: 'checking' }); clearTimeout(this.fdaTimer); this.fdaTimer = setTimeout(() => this.setState({ fda: 'granted' }), 1800); },
+      login: s.login, loginTrack: s.login ? t.accent : t.track, loginAlign: s.login ? 'flex-end' : 'flex-start',
+      toggleLogin: () => this.setState((st) => ({ login: !st.login })),
+      startFirstScan: () => this.startScan(),
       isMain: s.screen === 'main', isReview: s.screen === 'review', isGrowth: s.screen === 'growth',
       isCleaning: s.screen === 'cleaning', isResult: s.screen === 'result',
       freeLabel: fmt(free),
@@ -408,35 +592,64 @@ class Component extends DCLogic {
         ? 'of 245 GB · ' + Math.round(free - WARN) + ' GB above your 20 GB warning'
         : 'of 245 GB · ' + Math.round(WARN - free) + ' GB below your 20 GB warning',
       subColor: level === 'critical' ? t.red : level === 'low' ? t.orange : t.sec,
+      showPurgeable: level !== 'ok',
+      showRunway: falling && runwayDays <= 30 && !s.scanning,
+      runwayLine: 'Falling about 1.4 GB a day. Full in about ' + runwayDays + (runwayDays === 1 ? ' day.' : ' days.'),
+      runwayColor: runwayDays <= 7 ? t.orange : t.sec,
       segments: segments,
       tickLeft: ((CAP - WARN) / CAP * 100).toFixed(2) + '%',
       showAlert: scenario === 'Growth alert' && !s.alertDone,
       openGrowth: go('growth'),
       ignoreGrowth: () => this.setState({ alertDone: true, screen: 'main' }),
-      cleanGrowth: () => this.runClean([{ name: 'Chrome temporary copies', gb: 9.1, measured: 9.1 }], 'growth'),
-      readyTitle: s.cleaned ? 'Caches are clean' : 'Ready to clean',
-      readyLine: s.cleaned ? 'Nothing left that can go without a cost.' : fmt(readyGb) + ' in 4 caches · nothing lost',
-      canReview: !s.cleaned,
-      openReview: () => this.setState({ screen: 'review', sel: { npm: true, spotify: true, oikos: true, metro: true, vscode: false } }),
+      cleanGrowth: () => this.runClean([{ id: 'chrome', name: 'Chrome temporary copies', gb: 9.1, measured: 9.1 }], 'growth'),
+      readyTitle: s.scanning ? 'Measuring folders…' : s.cleaned ? 'Caches are clean' : 'Ready to clean',
+      readyLine: s.scanning ? s.scanCount.toLocaleString('en-GB') + ' of 2,427 folders' : s.cleaned ? 'Nothing left that can go without a cost.' : fmt(readyGb) + ' in 5 caches · nothing lost',
+      showIloHint: !s.scanning && !s.cleaned,
+      canReview: !s.cleaned && !s.scanning,
+      openReview: openSet('caches'),
       reviewBg: level === 'ok' ? t.btn : t.accent,
       reviewColor: level === 'ok' ? t.text : t.onAccent,
       groups: groups,
-      scanLine: 'Scanned ' + s.scanned,
+      scanLine: s.scanning ? 'Scanning…' : 'Scanned ' + s.scanned,
       scanNow: () => this.setState({ scanned: 'just now' }),
       goMain: () => { clearInterval(this.timer); this.setState({ screen: 'main' }); },
+      reviewTitle: mode === 'share' ? 'Share space' : mode === 'forgotten' ? 'Forgotten files' : 'Review cleanup',
+      reviewNote: mode === 'share' ? 'Each set becomes copies that share one set of disk blocks. Every file stays where it is; editing one later only uses space for the change.'
+        : mode === 'forgotten' ? 'Ticked files go to the Bin. The space comes back when you empty it.'
+        : 'Nothing is removed until you confirm below.',
+      showShareCost: mode === 'share',
       items: items,
-      selLine: chosen.length ? fmt(selGb) + ' selected in ' + chosen.length + (chosen.length === 1 ? ' item' : ' items') : 'Nothing selected',
+      selLine: chosen.length ? fmt(selGb) + ' selected in ' + chosen.length + (chosen.length === 1 ? (mode === 'share' ? ' set' : ' item') : (mode === 'share' ? ' sets' : ' items')) : 'Nothing selected',
       noneSelected: chosen.length === 0,
       confirmOpacity: chosen.length ? '1' : '0.45',
-      confirmLabel: chosen.length === 0 ? 'Clean' : (quits.length ? 'Quit ' + quits.join(' and ') + ' and clean ' : 'Clean ') + fmt(selGb),
-      confirmClean: () => this.runClean(chosen.map((i) => ({ name: i.name, gb: i.gb, measured: i.measured })), 'caches'),
+      confirmLabel: confirmLabel,
+      confirmClean: () => this.runClean(chosen.map((i) => ({ id: i.id, name: i.name, gb: i.gb, measured: i.measured, bin: !!i.bin })), mode),
+      cleaningTitle: mode === 'share' ? 'Sharing space…' : mode === 'forgotten' ? 'Moving to the Bin…' : 'Cleaning…',
       progress: progress,
       stopClean: () => {
         clearInterval(this.timer);
-        this.setState((st) => this.finish(st, st.queue.slice(0, Math.min(st.step + 1, st.queue.length)), 'caches'));
+        this.setState((st) => this.finish(st, st.queue.slice(0, Math.min(st.step + 1, st.queue.length)), st.mode));
+        this.startDrain();
       },
-      lastFreedLabel: fmt(s.lastFreed),
-      doneItems: s.doneItems.map((d) => ({ name: d.name, label: fmt(d.measured) }))
+      resultTitle: binMode ? 'Moved ' + fmt(binGb) + ' to the Bin' : 'Freed ' + fmt(s.lastFreed * s.countP),
+      resultSub: binMode ? 'Empty the Bin to free the space. Until then, Put Back restores each file to where it was.'
+        : s.mode === 'share' ? 'Nothing was deleted · measured from free space before and after'
+        : fmt(free) + ' free now · measured from free space before and after',
+      showDrain: !binMode && s.lastFreed > 0,
+      drainW: drainPct,
+      drainScale: s.drained ? 'scaleX(0)' : 'scaleX(1)',
+      drainTransition: s.reduce ? 'none' : 'transform 450ms cubic-bezier(0.22, 1, 0.36, 1)',
+      freeShownLabel: fmt(free - s.lastFreed * (1 - s.countP)),
+      doneItems: s.doneItems.map((d) => {
+        const back = !!s.putBack[d.id];
+        return {
+          name: d.name,
+          label: d.bin ? (back ? 'Put back' : 'In the Bin') : fmt(d.measured),
+          labelColor: d.bin ? t.sec : t.green,
+          canPutBack: d.bin && !back,
+          putBack: () => this.setState((st) => ({ putBack: Object.assign({}, st.putBack, { [d.id]: true }), binned: false }))
+        };
+      })
     };
   }
 }

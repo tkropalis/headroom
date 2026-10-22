@@ -31,7 +31,13 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <div role="tablist" aria-label="Settings sections" style="display: flex; justify-content: center; gap: 4px">
 <sc-for list="{{tabs}}" as="tab" hint-placeholder-count="5">
 <button type="button" role="tab" aria-selected="{{tab.active}}" onClick="{{tab.pick}}" style="width: 76px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 8px; background: {{tab.bg}}; color: {{tab.color}}; font-size: 11px">
-<span style="font-size: 17px; line-height: 1">{{tab.glyph}}</span>
+<span aria-hidden="true" style="width: 20px; height: 20px; display: grid; place-items: center">
+<sc-if value="{{tab.gGeneral}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M9 1.8v2.1M9 14.1v2.1M1.8 9h2.1M14.1 9h2.1M3.9 3.9l1.5 1.5M12.6 12.6l1.5 1.5M3.9 14.1l1.5-1.5M12.6 5.4l1.5-1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path><circle cx="9" cy="9" r="5.4" fill="none" stroke="currentColor" stroke-width="1.5"></circle></svg></sc-if>
+<sc-if value="{{tab.gAlerts}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4.5 12.5V8a4.5 4.5 0 0 1 9 0v4.5l1.3 1.5H3.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><path d="M7.3 15.6a1.9 1.9 0 0 0 3.4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg></sc-if>
+<sc-if value="{{tab.gScanning}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="7.8" cy="7.8" r="5" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="m11.5 11.5 4.3 4.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg></sc-if>
+<sc-if value="{{tab.gCaches}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M6.5 4.5h9M6.5 9h9M6.5 13.5h9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path><circle cx="3" cy="4.5" r="1.1" fill="currentColor"></circle><circle cx="3" cy="9" r="1.1" fill="currentColor"></circle><circle cx="3" cy="13.5" r="1.1" fill="currentColor"></circle></svg></sc-if>
+<sc-if value="{{tab.gHistory}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.8" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M9 5v4.2l2.8 1.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+</span>
 <span>{{tab.label}}</span>
 </button>
 </sc-for>
@@ -93,6 +99,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <input id="growAt" type="number" value="5" min="1" max="50" style="width: 56px; height: 24px; box-sizing: border-box; border-radius: 6px; border: 0; padding: 0 6px; text-align: right; background: {{t.control}}; color: {{t.text}}">
 <span style="color: {{t.sec}}">GB a day</span>
 </div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 8px 14px; box-shadow: inset 0 1px 0 {{t.sep}}">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<label for="runwayAt">Warn when the disk would be full within</label>
+<span style="font-size: 12px; color: {{t.sec}}">Based on the last 7 days. Shown in the popover from 30 days out.</span>
+</div>
+<input id="runwayAt" type="number" value="7" min="1" max="30" style="width: 56px; height: 24px; box-sizing: border-box; border-radius: 6px; border: 0; padding: 0 6px; text-align: right; background: {{t.control}}; color: {{t.text}}">
+<span style="color: {{t.sec}}">days</span>
+</div>
 </div>
 </div>
 </sc-if>
@@ -119,6 +133,40 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <span style="font-size: 12px; color: {{t.sec}}">3 folders were skipped in the last scan, including Mail and Safari data.</span>
 </div>
 <button type="button" style="height: 26px; padding: 0 12px; border: 0; border-radius: 7px; background: {{t.control}}; color: {{t.text}}">Open Privacy Settings…</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-weight: 600">Forgotten files</span>
+<div style="border-radius: 10px; background: {{t.group}}; display: flex; flex-direction: column">
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 14px; box-shadow: inset 0 -1px 0 {{t.sep}}">
+<label for="forgotSize" style="flex: 1">Larger than</label>
+<input id="forgotSize" type="number" value="500" min="100" max="10000" step="100" style="width: 64px; height: 24px; box-sizing: border-box; border-radius: 6px; border: 0; padding: 0 6px; text-align: right; background: {{t.control}}; color: {{t.text}}; font-variant-numeric: tabular-nums">
+<span style="color: {{t.sec}}">MB</span>
+</div>
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 8px 14px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<label for="forgotAge">Not opened for</label>
+<span style="font-size: 12px; color: {{t.sec}}">Uses the last-opened date from Spotlight, or the last-modified date when there is none.</span>
+</div>
+<select id="forgotAge" style="height: 24px; border-radius: 6px; border: 0; padding: 0 8px; background: {{t.control}}; color: {{t.text}}">
+<option>3 months</option>
+<option selected>6 months</option>
+<option>1 year</option>
+</select>
+</div>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-weight: 600">Identical files</span>
+<div style="border-radius: 10px; background: {{t.group}}; display: flex; flex-direction: column">
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 8px 14px">
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<label for="dupMin">Skip files smaller than</label>
+<span style="font-size: 12px; color: {{t.sec}}">Every file stays where it is. Copies share their disk space until one is edited.</span>
+</div>
+<input id="dupMin" type="number" value="100" min="4" max="10000" style="width: 64px; height: 24px; box-sizing: border-box; border-radius: 6px; border: 0; padding: 0 6px; text-align: right; background: {{t.control}}; color: {{t.text}}; font-variant-numeric: tabular-nums">
+<span style="color: {{t.sec}}">KB</span>
+</div>
+</div>
 </div>
 <div style="display: flex; flex-direction: column; gap: 6px">
 <span style="font-weight: 600">Don't scan</span>
@@ -158,6 +206,33 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 
 <sc-if value="{{isHistory}}" hint-placeholder-val="{{false}}">
 <div style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600">Free space, last 30 days</span>
+<span style="font-size: 12px; color: {{t.warn}}; font-variant-numeric: tabular-nums">Falling about 1.4 GB a day. Full in about 13 days.</span>
+</div>
+<div style="border-radius: 10px; background: {{t.group}}; padding: 10px 10px 6px">
+<svg role="img" aria-label="Free space over the last 30 days: from 31 GB on 23 September down to 8 GB on 21 October, back up to 28 GB after two cleanups on 22 October, now 18 GB. At about 1.4 GB a day it reaches zero around 4 November." width="624" height="190" viewBox="0 0 624 190" style="display: block; font-variant-numeric: tabular-nums">
+<sc-for list="{{chart.grid}}" as="g" hint-placeholder-count="4">
+<line x1="{{chart.left}}" x2="{{chart.right}}" y1="{{g.y}}" y2="{{g.y}}" stroke="{{t.sep}}" stroke-width="1"></line>
+<text x="{{g.lx}}" y="{{g.ty}}" text-anchor="end" font-size="10" fill="{{t.sec}}">{{g.label}}</text>
+</sc-for>
+<path d="{{chart.area}}" fill="{{t.accent}}" fill-opacity="0.16"></path>
+<path d="{{chart.line}}" fill="none" stroke="{{t.accent}}" stroke-width="1.8" stroke-linejoin="round"></path>
+<path d="{{chart.proj}}" fill="none" stroke="{{t.accent}}" stroke-width="1.6" stroke-dasharray="4 4" stroke-linecap="round"></path>
+<line x1="{{chart.left}}" x2="{{chart.right}}" y1="{{chart.warnY}}" y2="{{chart.warnY}}" stroke="{{t.orange}}" stroke-width="1.2" stroke-dasharray="2 3"></line>
+<text x="{{chart.right}}" y="{{chart.warnTY}}" text-anchor="end" font-size="10" fill="{{t.warn}}">Warning 20 GB</text>
+<line x1="{{chart.left}}" x2="{{chart.right}}" y1="{{chart.critY}}" y2="{{chart.critY}}" stroke="{{t.call}}" stroke-width="1.2" stroke-dasharray="2 3"></line>
+<text x="{{chart.right}}" y="{{chart.critTY}}" text-anchor="end" font-size="10" fill="{{t.call}}">Critical 10 GB</text>
+<line x1="{{chart.todayX}}" x2="{{chart.todayX}}" y1="{{chart.top}}" y2="{{chart.base}}" stroke="{{t.sec}}" stroke-width="1" stroke-opacity="0.5"></line>
+<sc-for list="{{chart.marks}}" as="m" hint-placeholder-count="2">
+<circle cx="{{m.x}}" cy="{{m.y}}" r="4" fill="{{t.safe}}" stroke="{{t.groupSolid}}" stroke-width="1.5"></circle>
+<text x="{{m.lx}}" y="{{m.ty}}" text-anchor="end" font-size="10" font-weight="600" fill="{{t.safe}}">{{m.label}}</text>
+</sc-for>
+<sc-for list="{{chart.xlabels}}" as="xl" hint-placeholder-count="4">
+<text x="{{xl.x}}" y="184" text-anchor="{{xl.anchor}}" font-size="10" fill="{{t.sec}}">{{xl.label}}</text>
+</sc-for>
+</svg>
+</div>
 <span style="font-size: 12px; color: {{t.sec}}">Every cleanup, with the space it actually freed.</span>
 <div style="overflow-x: auto; border-radius: 10px; background: {{t.group}}">
 <table style="width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums">
@@ -172,7 +247,14 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 <sc-for list="{{history}}" as="h" hint-placeholder-count="3">
 <tr style="box-shadow: inset 0 1px 0 {{t.sep}}">
 <td style="padding: 10px 14px; white-space: nowrap">{{h.date}}</td>
-<td style="padding: 10px 14px">{{h.what}}</td>
+<td style="padding: 10px 14px">
+<div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
+<span>{{h.what}}</span>
+<sc-if value="{{h.hasNote}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: {{t.sec}}">{{h.note}}</span></sc-if>
+<sc-if value="{{h.canPutBack}}" hint-placeholder-val="{{false}}"><button type="button" onClick="{{h.putBack}}" style="height: 24px; padding: 0 10px; border: 0; border-radius: 12px; background: {{t.control}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Put Back</button></sc-if>
+<sc-if value="{{h.wasPutBack}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: {{t.sec}}">Put back</span></sc-if>
+</div>
+</td>
 <td style="padding: 10px 14px; text-align: right; white-space: nowrap">{{h.freed}}</td>
 </tr>
 </sc-for>
@@ -190,7 +272,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid 
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { tab: 'general', login: true, daily: true, off: {} };
+    this.state = { tab: 'general', login: true, daily: true, off: {}, putBack: false };
   }
   renderVals() {
     const dark = (this.props.appearance ?? 'Light') === 'Dark';
@@ -200,25 +282,29 @@ class Component extends DCLogic {
       win: 'rgba(30,30,36,0.55)', bar: 'rgba(255,255,255,0.05)', group: 'rgba(255,255,255,0.08)', control: 'rgba(255,255,255,0.16)',
       text: '#f5f5f7', sec: '#c4c4cb', hair: 'rgba(0,0,0,0.4)', sep: 'rgba(255,255,255,0.1)', dim: '#4a4a50',
       accent: '#2570dc', off: 'rgba(255,255,255,0.22)', orange: '#ff9f0a', tabActive: 'rgba(255,255,255,0.12)',
-      safeBg: 'rgba(50,209,90,0.16)', safe: '#5fe07e', warnBg: 'rgba(255,159,10,0.16)', warn: '#ffb340', callBg: 'rgba(255,90,79,0.16)', call: '#ff8a80'
+      safeBg: 'rgba(50,209,90,0.16)', safe: '#5fe07e', warnBg: 'rgba(255,159,10,0.16)', warn: '#ffb340', callBg: 'rgba(255,90,79,0.16)', call: '#ff8a80',
+      groupSolid: '#2a2a30'
     } : {
       wall: '#9db3cd', blob1: '#5b8def', blob2: '#f2b45a', blob3: '#3fb8a9', blur: '40px',
       edge: 'rgba(255,255,255,0.85)', rim: 'rgba(255,255,255,0.5)',
       win: 'rgba(246,246,250,0.55)', bar: 'rgba(255,255,255,0.25)', group: 'rgba(255,255,255,0.6)', control: 'rgba(255,255,255,0.7)',
       text: '#111114', sec: '#3d3d45', hair: 'rgba(0,0,0,0.12)', sep: 'rgba(0,0,0,0.08)', dim: '#d0d0d4',
       accent: '#2570dc', off: 'rgba(0,0,0,0.16)', orange: '#c76a00', tabActive: 'rgba(0,0,0,0.07)',
-      safeBg: '#e2f3e6', safe: '#1b6e30', warnBg: '#fbeedb', warn: '#8f4600', callBg: '#fbe4e2', call: '#a8121f'
+      safeBg: '#e2f3e6', safe: '#1b6e30', warnBg: '#fbeedb', warn: '#8f4600', callBg: '#fbe4e2', call: '#a8121f',
+      groupSolid: '#f4f4f7'
     };
     const s = this.state;
     const TABS = [
-      { id: 'general', label: 'General', glyph: '⚙︎' },
-      { id: 'alerts', label: 'Alerts', glyph: '◔' },
-      { id: 'scanning', label: 'Scanning', glyph: '⌕' },
-      { id: 'caches', label: 'Caches', glyph: '☰' },
-      { id: 'history', label: 'History', glyph: '↺' }
+      { id: 'general', label: 'General' },
+      { id: 'alerts', label: 'Alerts' },
+      { id: 'scanning', label: 'Scanning' },
+      { id: 'caches', label: 'Caches' },
+      { id: 'history', label: 'History' }
     ];
     const tabs = TABS.map((x) => ({
-      label: x.label, glyph: x.glyph, active: s.tab === x.id,
+      label: x.label, active: s.tab === x.id,
+      gGeneral: x.id === 'general', gAlerts: x.id === 'alerts', gScanning: x.id === 'scanning',
+      gCaches: x.id === 'caches', gHistory: x.id === 'history',
       bg: s.tab === x.id ? t.tabActive : 'transparent',
       color: s.tab === x.id ? t.accent : t.sec,
       pick: () => this.setState({ tab: x.id })
@@ -235,15 +321,66 @@ class Component extends DCLogic {
       { id: 'gradle', name: 'Gradle caches', method: 'Deletes ~/.gradle/caches and old Gradle versions', level: 'Rebuilds on use' },
       { id: 'docker', name: 'Unused Docker images', method: 'Runs docker system prune -a; volumes are kept', level: 'Rebuilds on use' },
       { id: 'sim', name: 'iOS Simulator caches', method: 'Asks for your password', level: 'Rebuilds on use' },
-      { id: 'claude', name: 'Claude Code history over 60 days', method: 'Moves old sessions to the Bin', level: 'Your call' }
+      { id: 'claude', name: 'Claude Code history over 60 days', method: 'Moves old sessions to the Bin', level: 'Your call' },
+      { id: 'simgone', name: 'Unavailable simulators', method: 'Runs xcrun simctl delete unavailable', level: 'Safe' },
+      { id: 'brew', name: 'Homebrew old versions and downloads', method: 'Runs brew cleanup', level: 'Safe' },
+      { id: 'pnpm', name: 'pnpm store, unreferenced packages', method: 'Runs pnpm store prune', level: 'Safe' },
+      { id: 'simrt', name: 'Old simulator runtimes no device uses', method: 'Runs xcrun simctl runtime delete; Xcode downloads them again', level: 'Rebuilds on use' },
+      { id: 'sysimg', name: 'Android system images no emulator uses', method: 'Deletes the image folder; Android Studio downloads it again', level: 'Rebuilds on use' },
+      { id: 'devsup', name: 'iOS DeviceSupport for unused iOS versions', method: 'Deletes old version folders; rebuilt when that device connects', level: 'Rebuilds on use' },
+      { id: 'simold', name: 'Simulators not booted in 90 days', method: 'Runs xcrun simctl delete; their test apps and data are lost', level: 'Your call' },
+      { id: 'avd', name: 'Android emulators not started in 60 days', method: 'Deletes the .avd folder and .ini; Offload is offered instead', level: 'Your call' },
+      { id: 'archives', name: 'Xcode archives over a year old', method: 'Moves them to the Bin, keeping the newest per app', level: 'Your call' },
+      { id: 'models', name: 'Local AI models (Ollama, LM Studio)', method: 'Runs ollama rm or deletes the model folder', level: 'Your call' }
     ];
     const caches = CACHES.map((c) => ({
       id: c.id, name: c.name, method: c.method, level: c.level, on: !s.off[c.id],
       pillBg: LEVEL[c.level][0], pillColor: LEVEL[c.level][1],
       toggle: () => this.setState((st) => ({ off: Object.assign({}, st.off, { [c.id]: !st.off[c.id] }) }))
     }));
+    // Free-space chart: 30 days back (23 Sep) to 13 days ahead (4 Nov), 0 to 35 GB.
+    const L = 34, R = 616, TOP = 8, BASE = 166, D0 = -29, D1 = 13, GMAX = 35;
+    const X = (d) => +(L + (d - D0) / (D1 - D0) * (R - L)).toFixed(1);
+    const Y = (g) => +(BASE - g / GMAX * (BASE - TOP)).toFixed(1);
+    const pts = [];
+    for (let d = -29; d <= -1; d++) {
+      const g = d <= -8 ? 31 - (d + 29) * 0.57 : 19 - (d + 8) * 1.43;
+      pts.push([d, g + Math.sin(d * 1.7) * 0.8]);
+    }
+    pts.push([-0.55, 7.9], [-0.49, 17.3], [-0.48, 28.0], [0, 18]);
+    const line = pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]) + ',' + Y(p[1])).join(' ');
+    const chart = {
+      left: L, right: R, top: TOP, base: BASE,
+      line: line,
+      area: line + ' L' + X(0) + ',' + BASE + ' L' + X(D0) + ',' + BASE + ' Z',
+      proj: 'M' + X(0) + ',' + Y(18) + ' L' + X(12.9) + ',' + Y(0),
+      warnY: Y(20), warnTY: Y(20) - 4, critY: Y(10), critTY: Y(10) - 4,
+      todayX: X(0),
+      grid: [0, 10, 20, 30].map((g) => ({ y: Y(g), ty: Y(g) + 3, lx: L - 6, label: g + ' GB' })),
+      marks: [
+        { x: X(-0.49), y: Y(17.3), lx: X(-0.49) - 8, ty: Y(17.3) + 4, label: '+9.4 GB' },
+        { x: X(-0.48), y: Y(28.0), lx: X(-0.48) - 8, ty: Y(28.0) + 4, label: '+10.7 GB' }
+      ],
+      xlabels: [
+        { x: X(D0), label: '23 Sep', anchor: 'start' },
+        { x: X(-14), label: '8 Oct', anchor: 'middle' },
+        { x: X(0), label: 'Today', anchor: 'middle' },
+        { x: X(D1), label: '4 Nov', anchor: 'end' }
+      ]
+    };
+    const HISTORY = [
+      { date: '22 Oct, 12:40', what: 'Claude VM image (in the Bin)', freed: '0 GB', note: '0 GB until the Bin is emptied.', inBin: true },
+      { date: '22 Oct, 12:31', what: '11 caches and 3 build folders', freed: '10.7 GB' },
+      { date: '22 Oct, 12:24', what: 'Chrome temporary copies', freed: '9.4 GB' }
+    ];
+    const history = HISTORY.map((h) => ({
+      date: h.date, what: h.what, freed: h.freed,
+      hasNote: !!h.inBin && !s.putBack, note: h.note,
+      canPutBack: !!h.inBin && !s.putBack, wasPutBack: !!h.inBin && s.putBack,
+      putBack: () => this.setState({ putBack: true })
+    }));
     return {
-      t: t, tabs: tabs,
+      t: t, tabs: tabs, chart: chart, history: history,
       tabTitle: TABS.filter((x) => x.id === s.tab)[0].label,
       isGeneral: s.tab === 'general', isAlerts: s.tab === 'alerts', isScanning: s.tab === 'scanning',
       isCaches: s.tab === 'caches', isHistory: s.tab === 'history',
@@ -252,11 +389,7 @@ class Component extends DCLogic {
       daily: s.daily, dailyTrack: s.daily ? t.accent : t.off, dailyAlign: s.daily ? 'flex-end' : 'flex-start',
       toggleDaily: () => this.setState((st) => ({ daily: !st.daily })),
       exclusions: ['/Volumes (external drives)', '~/Library/Mobile Documents (iCloud Drive)'],
-      caches: caches,
-      history: [
-        { date: '22 Oct, 12:31', what: '11 caches and 3 build folders', freed: '10.7 GB' },
-        { date: '22 Oct, 12:24', what: 'Chrome temporary copies', freed: '9.4 GB' }
-      ]
+      caches: caches
     };
   }
 }

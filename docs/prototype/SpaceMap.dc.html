@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Headroom Space Map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2570dc}a:hover{color:#0b4fb0}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid rgba(37,112,220,.55);outline-offset:1px}
+</style>
+</helmet>
+<div style="width: 1200px; height: 760px; position: relative; overflow: hidden; background: {{t.wall}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; color: {{t.text}}; -webkit-font-smoothing: antialiased">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden">
+<span style="position: absolute; left: -100px; top: 380px; width: 560px; height: 520px; border-radius: 50%; background: {{t.blob1}}; filter: blur(80px); opacity: 0.85"></span>
+<span style="position: absolute; left: 560px; top: -140px; width: 520px; height: 440px; border-radius: 50%; background: {{t.blob4}}; filter: blur(80px); opacity: 0.8"></span>
+<span style="position: absolute; left: 820px; top: 340px; width: 460px; height: 480px; border-radius: 50%; background: {{t.blob3}}; filter: blur(80px); opacity: 0.8"></span>
+<span style="position: absolute; left: 320px; top: 560px; width: 480px; height: 360px; border-radius: 50%; background: {{t.blob2}}; filter: blur(80px); opacity: 0.8"></span>
+</div>
+
+<div role="region" aria-label="Headroom Space Map" style="position: absolute; left: 40px; top: 35px; width: 1120px; height: 690px; border-radius: 22px; overflow: hidden; background: {{t.win}}; backdrop-filter: blur({{t.blur}}) saturate(1.8); -webkit-backdrop-filter: blur({{t.blur}}) saturate(1.8); box-shadow: 0 24px 60px rgba(0,0,0,0.28), inset 0 1px 0 {{t.edge}}, inset 0 0 0 0.5px {{t.rim}}, 0 0 0 0.5px {{t.hair}}; display: flex; flex-direction: column">
+
+<div style="flex: none; height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: {{t.bar}}; box-shadow: inset 0 -1px 0 {{t.sep}}">
+<div style="display: flex; gap: 8px; margin-right: 6px">
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f57"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #febc2e"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #28c840"></span>
+</div>
+<span style="font-weight: 600; margin-right: 8px">Space Map</span>
+<button type="button" aria-label="Back" disabled="{{noBack}}" onClick="{{goBack}}" style="width: 30px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}; opacity: {{backOpacity}}"><svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12"><path d="M7 1.5 2.5 6 7 10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+<button type="button" aria-label="Forward" disabled="{{noFwd}}" onClick="{{goFwd}}" style="width: 30px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}; opacity: {{fwdOpacity}}"><svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12"><path d="M3 1.5 7.5 6 3 10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+<nav aria-label="Folder path" style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; margin-left: 6px">
+<sc-for list="{{crumbs}}" as="c" hint-placeholder-count="2">
+<span style="display: inline-flex; align-items: center; gap: 2px; min-width: 0">
+<sc-if value="{{c.notFirst}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="8" height="10" viewBox="0 0 8 10" style="flex: none; color: {{t.sec}}"><path d="M2.5 1.5 5.8 5 2.5 8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+<button type="button" aria-current="{{c.current}}" onClick="{{c.go}}" style="height: 26px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: {{t.text}}; font-weight: {{c.weight}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.name}}</button>
+</span>
+</sc-for>
+</nav>
+<label style="flex: none; width: 220px; height: 28px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 14px; background: {{t.control}}; color: {{t.sec}}">
+<svg aria-hidden="true" width="13" height="13" viewBox="0 0 13 13"><circle cx="5.6" cy="5.6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5"></circle><path d="M8.8 8.8 12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+<input type="search" aria-label="Search this folder and below" placeholder="Search" value="{{query}}" onChange="{{setQuery}}" style="flex: 1; min-width: 0; height: 24px; border: 0; padding: 0; background: transparent; color: {{t.text}}; outline-offset: 4px">
+</label>
+</div>
+
+<div style="flex: 1; min-height: 0; display: flex">
+
+<nav aria-label="Locations" style="flex: none; width: 220px; box-sizing: border-box; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; background: {{t.side}}; box-shadow: inset -1px 0 0 {{t.sep}}; overflow-y: auto">
+<span style="padding: 0 10px 4px; font-size: 11px; font-weight: 600; color: {{t.sec}}">This Mac</span>
+<sc-for list="{{side}}" as="sd" hint-placeholder-count="8">
+<button type="button" aria-current="{{sd.active}}" onClick="{{sd.pick}}" style="height: 30px; display: flex; align-items: center; gap: 9px; padding: 0 10px; border: 0; border-radius: 8px; background: {{sd.bg}}; color: {{t.text}}; text-align: left; font-weight: {{sd.weight}}">
+<sc-if value="{{sd.isDrive}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="15" height="12" viewBox="0 0 17 13" style="flex: none"><rect x="0.8" y="2.3" width="15.4" height="9.4" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.4"></rect><path d="M3.2 8.6h5.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="13" cy="8.6" r="1" fill="currentColor"></circle></svg></sc-if>
+<sc-if value="{{sd.isCat}}" hint-placeholder-val="{{true}}"><span aria-hidden="true" style="flex: none; width: 10px; height: 10px; margin: 0 2px 0 3px; border-radius: 3px; background: {{sd.swatch}}"></span></sc-if>
+<span style="flex: 1; min-width: 0">{{sd.name}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{sd.size}}</span>
+</button>
+</sc-for>
+<div style="height: 1px; background: {{t.sep}}; margin: 8px 10px"></div>
+<span style="padding: 0 10px 4px; font-size: 11px; font-weight: 600; color: {{t.sec}}">Kept elsewhere</span>
+<button type="button" aria-current="{{offActive}}" onClick="{{pickOffloaded}}" style="height: 30px; display: flex; align-items: center; gap: 9px; padding: 0 10px; border: 0; border-radius: 8px; background: {{offBg}}; color: {{t.text}}; text-align: left; font-weight: {{offWeight}}">
+<svg aria-hidden="true" width="15" height="13" viewBox="0 0 15 13" style="flex: none"><path d="M1.5 7.5h3.2l1 1.8h3.6l1-1.8h3.2M1.5 7.5 3.4 2.2h8.2l1.9 5.3v3.7H1.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+<span style="flex: 1">Offloaded</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{offCount}}</span>
+</button>
+</nav>
+
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: {{t.pane}}; position: relative">
+
+<sc-if value="{{isMap}}" hint-placeholder-val="{{true}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+<div style="flex: none; padding: 14px 18px 8px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<span style="font-size: 17px; font-weight: 600">{{listTitle}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{listSub}}</span>
+</div>
+<div aria-hidden="true" style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) 96px 92px 120px; gap: 10px; padding: 0 50px 6px 28px; font-size: 11px; font-weight: 600; color: {{t.sec}}; box-shadow: inset 0 -1px 0 {{t.sep}}; margin: 0 8px">
+<span>Name</span><span>Kind</span><span>Last opened</span><span style="text-align: right">Size</span>
+</div>
+<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 1px">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 34px; align-items: center; border-radius: 8px; background: {{r.bg}}">
+<button type="button" aria-pressed="{{r.selected}}" onClick="{{r.select}}" onDoubleClick="{{r.drill}}" style="display: grid; grid-template-columns: minmax(0, 1fr) 96px 92px 120px; gap: 10px; align-items: center; min-height: 42px; padding: 4px 6px 4px 12px; border: 0; border-radius: 8px; background: transparent; color: {{t.text}}; text-align: left">
+<span style="display: flex; align-items: center; gap: 9px; min-width: 0">
+<sc-if value="{{r.isFile}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="14" height="16" viewBox="0 0 14 16" style="flex: none; color: {{t.sec}}"><path d="M2 1.5h6.2L12 5.3V14.5H2z M8 1.5v4h4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg></sc-if>
+<sc-if value="{{r.isFolder}}" hint-placeholder-val="{{true}}"><svg aria-hidden="true" width="16" height="14" viewBox="0 0 16 14" style="flex: none; color: {{r.iconColor}}"><path d="M1.5 3.2c0-.8.6-1.4 1.4-1.4h3.2l1.5 1.6h5.5c.8 0 1.4.6 1.4 1.4v6.8c0 .8-.6 1.4-1.4 1.4H2.9c-.8 0-1.4-.6-1.4-1.4z" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg></sc-if>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span>
+<sc-if value="{{r.hasSub}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; color: {{t.sec}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span></sc-if>
+</span>
+</span>
+<span style="min-width: 0"><sc-if value="{{r.hasKind}}" hint-placeholder-val="{{false}}"><span style="display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: {{t.pill}}; color: {{t.text}}; white-space: nowrap">{{r.kind}}</span></sc-if></span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums; white-space: nowrap">{{r.last}}</span>
+<span style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+<span style="font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap">{{r.size}}</span>
+<span aria-hidden="true" style="width: 100%; height: 3px; border-radius: 2px; background: {{t.track}}; display: flex; justify-content: flex-end"><span style="width: {{r.barW}}; height: 100%; border-radius: 2px; background: {{t.barC}}"></span></span>
+</span>
+</button>
+<sc-if value="{{r.canDrill}}" hint-placeholder-val="{{true}}">
+<button type="button" aria-label="Open {{r.name}}" onClick="{{r.drill}}" style="width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: {{t.sec}}"><svg aria-hidden="true" width="8" height="12" viewBox="0 0 8 12"><path d="M2 1.5 6.2 6 2 10.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{noRows}}" hint-placeholder-val="{{false}}">
+<div style="padding: 40px 20px; text-align: center; color: {{t.sec}}">{{emptyText}}</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isOff}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+<div style="flex: none; padding: 14px 18px 4px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 600">Offloaded</span>
+<span style="font-size: 12px; color: {{t.sec}}">Kept on a drive or in a compressed archive, off this Mac's internal disk. Restore puts each one back where it was.</span>
+</div>
+<div aria-hidden="true" style="flex: none; display: grid; grid-template-columns: minmax(0, 1fr) 120px 80px 150px; gap: 10px; padding: 10px 20px 6px; font-size: 11px; font-weight: 600; color: {{t.sec}}; box-shadow: inset 0 -1px 0 {{t.sep}}; margin: 0 8px">
+<span>Name</span><span>Offloaded</span><span style="text-align: right">Size</span><span></span>
+</div>
+<div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 1px">
+<sc-for list="{{offRows}}" as="o" hint-placeholder-count="2">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 160px; align-items: center; border-radius: 8px; background: {{o.bg}}">
+<button type="button" aria-pressed="{{o.selected}}" onClick="{{o.select}}" style="display: grid; grid-template-columns: minmax(0, 1fr) 120px 80px; gap: 10px; align-items: center; min-height: 46px; padding: 4px 6px 4px 12px; border: 0; border-radius: 8px; background: transparent; color: {{t.text}}; text-align: left">
+<span style="min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.name}}</span>
+<span style="font-size: 11px; color: {{t.sec}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.where}}</span>
+</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{o.date}}</span>
+<span style="font-size: 12px; text-align: right; font-variant-numeric: tabular-nums">{{o.size}}</span>
+</button>
+<div style="padding-right: 10px; display: flex; justify-content: flex-end">
+<sc-if value="{{o.connected}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{o.restore}}" style="height: 26px; padding: 0 12px; border: 0; border-radius: 13px; background: {{t.btn}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Restore…</button>
+</sc-if>
+<sc-if value="{{o.disconnected}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 11px; color: {{t.sec}}; text-align: right; line-height: 1.3">{{o.connectText}}</span>
+</sc-if>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{noOff}}" hint-placeholder-val="{{false}}">
+<div style="padding: 40px 20px; text-align: center; color: {{t.sec}}">Nothing is offloaded. Offload… in a folder's details moves it to a drive or an archive.</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 12px; min-height: 40px; box-sizing: border-box; padding: 8px 8px 8px 14px; border-radius: 12px; background: {{t.toast}}; color: {{t.toastText}}; box-shadow: 0 8px 24px rgba(0,0,0,0.22); display: flex; align-items: center; gap: 10px">
+<span style="flex: 1; min-width: 0; line-height: 1.35">{{toastText}}</span>
+<sc-if value="{{toastUndo}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{putBack}}" style="flex: none; height: 26px; padding: 0 12px; border: 0; border-radius: 13px; background: {{t.toastBtn}}; color: {{t.toastText}}; font-size: 12px; font-weight: 600">Put Back</button>
+</sc-if>
+<button type="button" aria-label="Dismiss" onClick="{{dismissToast}}" style="flex: none; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 13px; background: transparent; color: {{t.toastText}}"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2 2 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg></button>
+</div>
+</sc-if>
+
+</div>
+
+<aside aria-label="Details" style="flex: none; width: 300px; box-sizing: border-box; padding: 18px 18px 14px; display: flex; flex-direction: column; gap: 14px; box-shadow: inset 1px 0 0 {{t.sep}}; overflow-y: auto">
+
+<sc-if value="{{isMap}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<span aria-hidden="true" style="flex: none; width: 36px; height: 36px; border-radius: 9px; background: {{t.fill}}; display: grid; place-items: center; color: {{t.sec}}">
+<sc-if value="{{iFile}}" hint-placeholder-val="{{false}}"><svg width="16" height="18" viewBox="0 0 14 16"><path d="M2 1.5h6.2L12 5.3V14.5H2z M8 1.5v4h4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg></sc-if>
+<sc-if value="{{iFolder}}" hint-placeholder-val="{{true}}"><svg width="18" height="16" viewBox="0 0 16 14"><path d="M1.5 3.2c0-.8.6-1.4 1.4-1.4h3.2l1.5 1.6h5.5c.8 0 1.4.6 1.4 1.4v6.8c0 .8-.6 1.4-1.4 1.4H2.9c-.8 0-1.4-.6-1.4-1.4z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg></sc-if>
+</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 15px; font-weight: 600; overflow-wrap: anywhere">{{iName}}</span>
+<sc-if value="{{iHasPath}}" hint-placeholder-val="{{true}}"><span style="font-size: 11px; color: {{t.sec}}; overflow-wrap: anywhere; line-height: 1.35">{{iPath}}</span></sc-if>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums">{{iSize}}</span>
+<sc-if value="{{iHasLast}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: {{t.sec}}">{{iLast}}</span></sc-if>
+<sc-if value="{{iUpTo}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">{{iGain}}</span></sc-if>
+</div>
+<div style="padding: 10px 12px; border-radius: 10px; background: {{t.fill}}; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 11px; font-weight: 600; color: {{t.sec}}">What Headroom knows</span>
+<span style="line-height: 1.45">{{iKnows}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-if value="{{showClean}}" hint-placeholder-val="{{false}}">
+<a href="Main.dc.html" style="height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; background: {{t.accent}}; color: {{t.onAccent}}; text-decoration: none; font-weight: 500">Clean…</a>
+</sc-if>
+<sc-if value="{{showOffload}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{openOffload}}" style="height: 30px; border: 0; border-radius: 15px; background: {{offloadBg}}; color: {{offloadColor}}; font-weight: 500">Offload…</button>
+</sc-if>
+<sc-if value="{{showBin}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{moveToBin}}" style="height: 30px; border: 0; border-radius: 15px; background: {{t.btn}}; color: {{t.text}}">Move to Bin</button>
+</sc-if>
+<sc-if value="{{showFda}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{openPrivacy}}" style="height: 30px; border: 0; border-radius: 15px; background: {{t.accent}}; color: {{t.onAccent}}; font-weight: 500">Open Privacy Settings…</button>
+</sc-if>
+<sc-if value="{{showFinder}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{showInFinder}}" style="height: 30px; border: 0; border-radius: 15px; background: {{t.btn}}; color: {{t.text}}">Show in Finder</button>
+</sc-if>
+</div>
+<sc-if value="{{hasReason}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; gap: 8px; align-items: flex-start; color: {{t.sec}}">
+<svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" style="flex: none; margin-top: 1px"><circle cx="7" cy="7" r="5.8" fill="none" stroke="currentColor" stroke-width="1.3"></circle><path d="M5.6 4.6v4.8M8.4 4.6v4.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg>
+<span style="font-size: 12px; line-height: 1.4">{{iReason}}</span>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isOff}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<sc-if value="{{hasOffSel}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 15px; font-weight: 600; overflow-wrap: anywhere">{{oName}}</span>
+<span style="font-size: 12px; color: {{t.sec}}">{{oWhere}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums">{{oSize}}</span>
+<span style="font-size: 12px; color: {{t.sec}}">{{oDate}} · restores to {{oBack}}</span>
+</div>
+
+<sc-if value="{{oIdle}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-if value="{{oConnected}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{oAskRestore}}" style="height: 30px; border: 0; border-radius: 15px; background: {{t.btn}}; color: {{t.text}}; font-weight: 500">Restore…</button>
+</sc-if>
+<sc-if value="{{oDisconnected}}" hint-placeholder-val="{{false}}">
+<div style="padding: 10px 12px; border-radius: 10px; background: {{t.fill}}; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600">{{oConnectText}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">It stays listed here until you restore it or delete it from the drive.</span>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{oConfirm}}" hint-placeholder-val="{{false}}">
+<div style="padding: 12px; border-radius: 10px; background: {{t.fill}}; display: flex; flex-direction: column; gap: 10px">
+<span style="font-variant-numeric: tabular-nums; font-weight: 600">{{oNeeds}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">Headroom copies it back, checks every file, then asks whether to keep the offloaded copy.</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{oCancel}}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}">Cancel</button>
+<button type="button" onClick="{{oStart}}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-weight: 500">{{oConfirmLabel}}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{oProgress}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{oSteps}}" as="p" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="flex: none; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; background: {{p.dotBg}}; color: #ffffff">
+<sc-if value="{{p.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M2 5.2 4.2 7.4 8 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+</span>
+<span style="flex: 1">{{p.name}}</span>
+<span style="font-size: 12px; color: {{t.sec}}">{{p.status}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{oDone}}" hint-placeholder-val="{{false}}">
+<div style="padding: 12px; border-radius: 10px; background: {{t.fill}}; display: flex; flex-direction: column; gap: 10px">
+<span style="font-weight: 600">Restored to {{oBack}}. Every file checked.</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">{{oKeepQuestion}}</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{oKeep}}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}">Keep copy</button>
+<button type="button" onClick="{{oDrop}}" style="height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-weight: 500">{{oDropLabel}}</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+<sc-if value="{{noOffSel}}" hint-placeholder-val="{{false}}">
+<span style="color: {{t.sec}}">Select an offloaded item to see where it is kept.</span>
+</sc-if>
+</div>
+</sc-if>
+
+</aside>
+</div>
+
+<div style="flex: none; height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 12px; color: {{t.sec}}; box-shadow: inset 0 1px 0 {{t.sep}}; font-variant-numeric: tabular-nums">
+<span>Measured 3 min ago · 236 of 245 GB accounted for</span>
+<span>{{freeLabel}} free on Macintosh HD</span>
+</div>
+
+<sc-if value="{{showSheet}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 0; background: {{t.scrim}}; display: flex; justify-content: center; align-items: flex-start; padding-top: 52px">
+<div role="dialog" aria-modal="true" aria-label="{{sheetTitle}}" style="width: 460px; box-sizing: border-box; border-radius: 0 0 18px 18px; background: {{t.sheet}}; box-shadow: 0 18px 50px rgba(0,0,0,0.3), 0 0 0 0.5px {{t.hair}}; padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 14px">
+<span style="font-size: 15px; font-weight: 600">{{sheetTitle}}</span>
+
+<sc-if value="{{shChoose}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<span style="line-height: 1.45; color: {{t.sec}}">It moves off this Mac and is kept safe at the destination. Restore it from Offloaded whenever you need it.</span>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px">
+<legend style="padding: 0 0 6px; font-weight: 600">Where to keep it</legend>
+<label for="dest-t7" style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; background: {{t7Bg}}; align-items: flex-start">
+<input type="radio" id="dest-t7" name="dest" checked="{{destT7}}" onChange="{{pickT7}}" style="flex: none; margin: 2px 0 0; accent-color: {{t.accent}}">
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 500">T7</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">External drive · APFS · 412 GB free</span>
+</span>
+</label>
+<label for="dest-arc" style="display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; background: {{arcBg}}; align-items: flex-start; opacity: {{arcOpacity}}">
+<input type="radio" id="dest-arc" name="dest" checked="{{destArc}}" disabled="{{arcDisabled}}" onChange="{{pickArc}}" style="flex: none; margin: 2px 0 0; accent-color: {{t.accent}}">
+<span style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 500">Compressed archive on this Mac</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">{{arcLine}}</span>
+</span>
+</label>
+</fieldset>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.45">{{aliasNote}}</span>
+<sc-if value="{{shHasQuit}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; color: {{t.orange}}">{{shQuitNote}}</span>
+</sc-if>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{closeSheet}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.btnSolid}}; color: {{t.text}}">Cancel</button>
+<button type="button" onClick="{{startOffload}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-weight: 500">{{offloadLabel}}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{shProgress}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{shSteps}}" as="p" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="flex: none; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; background: {{p.dotBg}}; color: #ffffff">
+<sc-if value="{{p.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M2 5.2 4.2 7.4 8 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+</span>
+<span style="flex: 1; min-width: 0">{{p.name}}</span>
+<span style="flex: none; font-size: 12px; color: {{p.statusColor}}">{{p.status}}</span>
+</div>
+</sc-for>
+</div>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.45">The original is removed only after every file is checked on the destination.</span>
+<div style="display: flex; justify-content: flex-end">
+<button type="button" onClick="{{stopOffload}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.btnSolid}}; color: {{t.text}}">Stop</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{shDone}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 10px; align-items: flex-start">
+<span aria-hidden="true" style="flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: {{t.dotGreen}}; color: #ffffff"><svg width="12" height="12" viewBox="0 0 10 10"><path d="M2 5.2 4.2 7.4 8 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 3px">
+<span style="font-weight: 600; font-variant-numeric: tabular-nums">{{doneLine}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.4">It's listed under Offloaded. Restore it from there.</span>
+</span>
+</div>
+<div style="display: flex; justify-content: flex-end">
+<button type="button" onClick="{{closeSheet}}" style="height: 28px; padding: 0 16px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-weight: 500">Done</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"appearance":{"editor":"enum","options":["Light","Dark"],"default":"Light"},"reduceTransparency":{"editor":"boolean","default":false},"$preview":{"width":1200,"height":760}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.idx = this.buildTree();
+    this.state = {
+      stack: ['root'], back: [], fwd: [], section: 'map', sel: null, query: '',
+      gone: {}, toast: null, sheet: null, free: 18,
+      offloaded: [
+        { id: 'fcp', name: 'Final Cut library 2024', gb: 4.6, where: 'On T7 · Headroom Offload', date: 'Offloaded 3 Sep', drive: 'T7', connected: true, back: '~/Movies' },
+        { id: 'exports19', name: 'Photo exports 2019', gb: 7.8, where: 'On Backup HDD · Headroom Offload', date: 'Offloaded 12 May', drive: 'Backup HDD', connected: false, back: '~/Pictures' }
+      ],
+      offSel: 'fcp', restore: null
+    };
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  buildTree() {
+    const idx = {};
+    const n = (id, name, gb, o, kids) => {
+      const node = Object.assign({ id: id, name: name, gb: gb, kids: kids || [] }, o || {});
+      node.kids.forEach((k) => { k.parent = id; });
+      idx[id] = node;
+      return node;
+    };
+    const app = 'An app. Remove apps by dragging them to the Bin in Finder.';
+    const sys = 'Part of macOS. Headroom never changes it.';
+    const ilo = 'The ilov2front dev server is running. Stop it to clean or offload.';
+    n('root', 'Macintosh HD', 227, { path: '/', knows: '245 GB disk. 227 GB used, 18 GB free. Pick a category or open a folder to see what is in it.', finder: false }, [
+      n('macos', 'macOS', 56, { cat: true, path: '/System', knows: 'macOS and its recovery data. Headroom never changes these.', finder: false, reason: sys }, [
+        n('sysvol', 'System volume', 44, { path: '/System', knows: 'The read-only part of macOS. Updates replace it.', reason: sys, finder: false }),
+        n('preboot', 'Preboot and Recovery', 6.2, { path: '/System/Volumes/Preboot', knows: 'What the Mac needs to start up and to recover.', reason: sys, finder: false }),
+        n('vm', 'Virtual memory and sleep image', 5.8, { path: '/System/Volumes/VM', knows: 'Swap files and the sleep image. They shrink on their own after a restart.', reason: sys, finder: false })
+      ]),
+      n('dev', 'Developer', 39, { cat: true, path: 'Several folders', knows: 'Tool caches, build output, emulators and simulators. Most of it rebuilds on use.', finder: false }, [
+        n('gradle', 'Gradle', 8.8, { kind: 'Cache', last: 'Today', path: '~/.gradle', knows: 'Rebuilds on use. The next Android build downloads what it needs.', clean: true }, [
+          n('gcaches', 'caches', 7.3, { kind: 'Cache', last: 'Today', path: '~/.gradle/caches', knows: 'Rebuilds on use. Downloaded dependencies and build caches.', clean: true }),
+          n('gdists', 'wrapper/dists', 1.5, { kind: 'Cache', last: '2 Sep', path: '~/.gradle/wrapper/dists', knows: 'Old Gradle versions. Downloaded again if a project asks for one.', clean: true })
+        ]),
+        n('android', 'Android', 7.2, { last: '14 Jul', path: '~/.android and ~/Library/Android/sdk', knows: 'The Android emulator and SDK.', finder: false }, [
+          n('pixel7', 'Pixel_7', 3.1, { kind: 'Emulator', last: '14 Jul', path: '~/.android/avd/Pixel_7.avd', knows: 'Your call. Not started for 100 days. Deleting it loses its apps, data and snapshots.', clean: true, offload: true, compress: false, arcReason: 'Emulator images barely compress. Use a drive instead.', bin: true }),
+          n('sysimg', 'system-images/android-36', 2.3, { kind: 'App data', last: '14 Jul', path: '~/Library/Android/sdk/system-images/android-36', knows: 'The Android 36 system image.', reason: 'Used by the Pixel_7 emulator. Delete or offload the emulator first to clean this.' }),
+          n('sdkrest', 'SDK platforms and tools', 1.8, { kind: 'App data', last: 'Today', path: '~/Library/Android/sdk', knows: 'Needed to build Android apps.', reason: 'Android Studio manages these. Remove them in its SDK Manager.' })
+        ]),
+        n('simcaches', 'iOS Simulator caches', 3.2, { kind: 'Cache', last: '18 Oct', path: '~/Library/Developer/CoreSimulator/Caches', knows: 'Rebuilds on use. Needs your password. First boot is slower.', clean: true }),
+        n('derived', 'Xcode DerivedData', 6.4, { kind: 'Build output', last: 'Today', path: '~/Library/Developer/Xcode/DerivedData', knows: 'Ready to clean. Nothing lost; Xcode builds it again.', clean: true }),
+        n('homebrew', 'Homebrew', 3.4, { last: 'Today', path: '/opt/homebrew', knows: 'Homebrew and its packages. Old versions and downloads can go, up to 640 MB. Nothing lost.', clean: true }),
+        n('sims', 'iOS simulators', 2.2, { kind: 'Simulator', last: '18 Oct', path: '~/Library/Developer/CoreSimulator/Devices', knows: '9 simulators. 6 haven’t been booted in 90 days.' }, [
+          n('sim17', 'iPhone 17 Pro', 1.1, { kind: 'Simulator', last: '18 Oct', path: '~/Library/Developer/CoreSimulator/Devices/4F2A…', knows: 'Booted 4 days ago.', reason: 'Booted in the last 90 days, so Headroom doesn’t suggest it.' }),
+          n('simipad', 'iPad Air 13-inch', 0.42, { kind: 'Simulator', last: '2 Jun', path: '~/Library/Developer/CoreSimulator/Devices/9C1E…', knows: 'Your call. Not booted in 142 days. Test apps and their data in it are lost, and it can’t be put back.', clean: true }),
+          n('simse', 'iPhone SE (3rd generation)', 0.31, { kind: 'Simulator', last: '11 Mar', path: '~/Library/Developer/CoreSimulator/Devices/D07B…', knows: 'Your call. Not booted since 11 March. Test apps and their data in it are lost.', clean: true }),
+          n('simmore', '6 more simulators', 0.37, { kind: 'Simulator', last: '', path: '~/Library/Developer/CoreSimulator/Devices', knows: '4 of these haven’t been booted in 90 days.', clean: true, finder: false })
+        ]),
+        n('vscodews', 'VS Code workspace data', 2.1, { upTo: true, minGb: 1.2, kind: 'App data', last: 'Today', path: '~/Library/Application Support/Code/User/workspaceStorage', knows: 'Rebuilds on use. Folders not opened in 60 days lose their open tabs.', clean: true }),
+        n('npm', 'npm cache', 0.9, { kind: 'Cache', last: 'Today', path: '~/.npm', knows: 'Ready to clean. Nothing lost; npm downloads packages again when needed.', clean: true }),
+        n('archives', 'Xcode archives', 0.553, { kind: 'Build output', last: '9 Jan', path: '~/Library/Developer/Xcode/Archives', knows: 'Your call. 4 archives are over a year old. Without them you can’t symbolicate crashes from those builds.', clean: true, bin: true }),
+        n('pnpm', 'pnpm store', 0.388, { upTo: true, minGb: 0.15, kind: 'Cache', last: '20 Oct', path: '~/Library/pnpm', knows: 'Ready to clean. pnpm store prune removes packages no project uses.', clean: true }),
+        n('devrest', 'Other developer data', 3.86, { last: '', path: 'Several folders', knows: 'Smaller tool folders with no catalogue entry.', finder: false })
+      ]),
+      n('docker', 'Docker', 26, { cat: true, path: '~/Library/Containers/com.docker.docker', knows: 'Docker keeps images, containers, volumes and build cache inside one disk image.', finder: false }, [
+        n('dockerraw', 'Docker.raw', 26, { file: true, upTo: true, minGb: 5, kind: 'App data', last: 'Today', path: '~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw', knows: 'Unused images: up to 21 GB. Cleaning runs docker system prune -a. Volumes and running containers stay.', clean: true, reason: 'Docker uses this file while it runs, so it can’t be offloaded.' })
+      ]),
+      n('apps', 'Apps', 21, { cat: true, path: '/Applications and ~/Library/Application Support', knows: 'Apps in Applications and the data they keep in Library.', finder: false }, [
+        n('xcode', 'Xcode', 8.9, { last: 'Today', path: '/Applications/Xcode.app', knows: app }),
+        n('mamp', 'MAMP', 3.2, { kind: 'App data', last: '2 Feb', path: '/Applications/MAMP', knows: 'Your call. Not opened since 2 February. Export its databases first if you delete it.', offload: true, compress: true, bin: true }),
+        n('studio', 'Android Studio', 2.4, { last: '14 Jul', path: '/Applications/Android Studio.app', knows: app }),
+        n('steam', 'Steam', 2.1, { kind: 'App data', last: '30 Aug', path: '~/Library/Application Support/Steam', knows: 'Your call. Steam games and their data, saves included.', offload: true, compress: false, arcReason: 'Games barely compress. Use a drive instead.', quit: 'Steam', bin: true }),
+        n('minecraft', 'minecraft', 1.6, { kind: 'App data', last: '12 May', path: '~/Library/Application Support/minecraft', knows: 'Your call. Worlds and saves included.', offload: true, compress: true, bin: true }),
+        n('paradox', 'Paradox Interactive', 0.9, { kind: 'App data', last: '3 Apr', path: '~/Library/Application Support/Paradox Interactive', knows: 'Your call. Game data and saves.', offload: true, compress: true, bin: true }),
+        n('appsrest', 'Other apps', 1.9, { last: '', path: '/Applications', knows: '31 smaller apps and their data.', finder: false })
+      ]),
+      n('claude', 'Claude', 17, { cat: true, path: 'Several folders', knows: 'The Claude app, its VM image and Claude Code session history.', finder: false }, [
+        n('vmb', 'vm_bundles', 9.3, { kind: 'App data', last: 'Today', path: '~/Library/Application Support/Claude/vm_bundles', knows: 'Your call. Downloads again when Claude next needs it.', clean: true, reason: 'Claude needs this image on the internal disk, so it can’t be offloaded. Cleaning it is safe; it downloads again.' }),
+        n('cchist', 'Claude Code sessions', 2.7, { upTo: true, minGb: 1.9, kind: 'App data', last: 'Today', path: '~/.claude/projects', knows: 'Your call. Sessions over 60 days old can go. They can no longer be resumed.', clean: true }),
+        n('ccache', 'Claude caches', 1.4, { kind: 'Cache', last: 'Today', path: '~/Library/Caches/com.anthropic.claudefordesktop', knows: 'Ready to clean once Claude quits. Nothing lost.', clean: true }),
+        n('ccrest', 'Other Claude Code data', 3.0, { last: 'Today', path: '~/.claude', knows: 'Settings, plugins and recent sessions. Kept.' }),
+        n('capp', 'Claude', 0.6, { last: 'Today', path: '/Applications/Claude.app', knows: app })
+      ]),
+      n('projects', 'Projects', 11, { cat: true, path: '~/Thomas/Projects', knows: '22 projects found by their project files. Code is never cleaned, only build output and dependencies.' }, [
+        n('ilo', 'ilov2front', 3.4, { kind: 'Project', last: 'Today', path: '~/Thomas/Projects/ilov2front', knows: 'Next.js project. Last commit today. Build output: 1.7 GB in .next.', reason: ilo }, [
+          n('ilonext', '.next', 1.7, { kind: 'Build output', last: 'Today', path: '~/Thomas/Projects/ilov2front/.next', knows: 'Build cache. The next dev start is slower once.', reason: ilo }),
+          n('ilonm', 'node_modules', 1.4, { kind: 'Dependencies', last: 'Today', path: '~/Thomas/Projects/ilov2front/node_modules', knows: 'Reinstalled with npm install. Not suggested while the project is active.', reason: ilo }),
+          n('ilosrc', 'Code and assets', 0.3, { last: 'Today', path: '~/Thomas/Projects/ilov2front', knows: 'Your code. Headroom never cleans it.', finder: false })
+        ]),
+        n('oikos', 'oikos', 2.1, { kind: 'Project', last: '20 Oct', path: '~/Thomas/Projects/oikos', knows: 'Next.js project. Last commit 2 days ago. The .next build cache (600 MB) can go.', clean: true }, [
+          n('oinext', '.next', 0.6, { kind: 'Build output', last: '20 Oct', path: '~/Thomas/Projects/oikos/.next', knows: 'Ready to clean. The next dev start is slower once.', clean: true }),
+          n('oinm', 'node_modules', 1.2, { kind: 'Dependencies', last: '20 Oct', path: '~/Thomas/Projects/oikos/node_modules', knows: 'Reinstalled with npm install. Not suggested while the project is active.' }),
+          n('oisrc', 'Code and assets', 0.3, { last: '20 Oct', path: '~/Thomas/Projects/oikos', knows: 'Your code. Headroom never cleans it.', finder: false })
+        ]),
+        n('nexus', 'nexus', 0.9, { kind: 'Project', last: '7 Apr', path: '~/Thomas/Projects/nexus', knows: 'Dormant: no commit since 7 April. Its .venv (570 MB) can go; the code stays.', clean: true, offload: true, compress: true, user: true, bin: true }),
+        n('ergaz', 'ergazomenos', 0.6, { kind: 'Project', last: '13 Jul', path: '~/Thomas/Projects/ergazomenos', knows: 'Dormant: no commit since 13 July. node_modules and vendor (320 MB) can go.', clean: true, offload: true, compress: true, user: true, bin: true }),
+        n('jobagent', 'job-agent', 0.4, { kind: 'Project', last: '28 Aug', path: '~/Thomas/Projects/job-agent', knows: 'Dormant: no edit since 28 August, and no git. Its .venv (280 MB) can go.', clean: true, offload: true, compress: true, user: true, bin: true }),
+        n('projrest', '17 more projects', 3.6, { last: '', path: '~/Thomas/Projects', knows: 'Active projects with no build output worth cleaning.', finder: false })
+      ]),
+      n('other', 'Other', 48, { cat: true, path: 'Your home folder', knows: 'Your documents and media, and app data Headroom has no catalogue entry for.', finder: false }, [
+        n('photos', 'Photos Library', 14.6, { file: true, last: 'Today', path: '~/Pictures/Photos Library.photoslibrary', knows: 'Your Photos library. Optimise Mac Storage in Photos can keep the originals in iCloud.', reason: 'Headroom doesn’t change the Photos library. Manage it in Photos.' }),
+        n('docs', 'Documents', 12.4, { last: 'Today', path: '~/Documents', knows: 'Your documents.' }, [
+          n('design', 'Design files', 6.1, { last: '1 Oct', path: '~/Documents/Design', knows: 'Your files. Headroom never suggests deleting them.', offload: true, compress: true, user: true, bin: true }),
+          n('recording', 'Screen Recording 4 Mar.mov', 1.8, { file: true, kind: 'Forgotten', last: '4 Mar', path: '~/Documents/Screen Recording 4 Mar.mov', knows: 'Forgotten file: not opened since 4 March.', offload: true, compress: false, arcReason: 'Videos barely compress. Use a drive instead.', user: true, bin: true }),
+          n('invoices', 'Invoices 2025', 0.24, { last: '15 Oct', path: '~/Documents/Invoices 2025', knows: 'Your files.', offload: true, compress: true, user: true }),
+          n('docsrest', 'Everything else in Documents', 4.26, { last: '', path: '~/Documents', knows: 'Smaller files and folders.', finder: false })
+        ]),
+        n('libother', 'Other app data in Library', 9.4, { last: '', path: '~/Library', knows: 'Data apps keep in Library with no catalogue entry. Removing an app you don’t use is the way to remove its data.', finder: false }),
+        n('movies', 'Movies', 6.0, { last: '18 Sep', path: '~/Movies', knows: 'Your videos.', offload: true, compress: false, arcReason: 'Videos barely compress. Use a drive instead.', user: true }),
+        n('music', 'Music', 4.1, { last: '21 Oct', path: '~/Music', knows: 'Your music library.', offload: true, compress: false, arcReason: 'Music barely compresses. Use a drive instead.', user: true }),
+        n('desktop', 'Desktop', 1.1, { last: 'Today', path: '~/Desktop', knows: 'Files on your desktop.', offload: true, compress: true, user: true }),
+        n('downloads', 'Downloads', 0.367, { last: 'Today', path: '~/Downloads', knows: 'Nothing here is over 500 MB or forgotten.' })
+      ]),
+      n('notmeasured', 'Not measured', 9, { path: '', knows: '9 GB Headroom can’t read: system data macOS keeps private (about 5 GB), space macOS can purge on its own (2 GB), and Mail and Safari data skipped without Full Disk Access (about 2 GB).', fda: true, finder: false })
+    ]);
+    return idx;
+  }
+
+  nav(next) {
+    this.setState((s) => ({
+      back: s.back.concat([{ section: s.section, stack: s.stack }]), fwd: [],
+      section: next.section, stack: next.stack || s.stack, sel: null, query: '', restore: null
+    }));
+  }
+
+  tick(onStep, steps, done) {
+    clearInterval(this.timer);
+    let i = 0;
+    this.timer = setInterval(() => {
+      i += 1;
+      if (i < steps) { onStep(i); return; }
+      clearInterval(this.timer);
+      done();
+    }, 650);
+  }
+
+  renderVals() {
+    const dark = (this.props.appearance ?? 'Light') === 'Dark';
+    const t = dark ? {
+      wall: '#141c2b', blob1: '#2d5aa8', blob2: '#1d7a72', blob3: '#8a3f6a', blob4: '#9a6a22',
+      win: 'rgba(30,30,36,0.55)', winSolid: '#232328', blur: '40px', edge: 'rgba(255,255,255,0.22)', rim: 'rgba(255,255,255,0.14)', hair: 'rgba(0,0,0,0.4)',
+      bar: 'rgba(255,255,255,0.05)', side: 'rgba(255,255,255,0.04)', pane: 'rgba(0,0,0,0.14)',
+      text: '#f5f5f7', sec: '#c4c4cb', sep: 'rgba(255,255,255,0.1)', fill: 'rgba(255,255,255,0.08)', pill: 'rgba(255,255,255,0.12)',
+      control: 'rgba(255,255,255,0.12)', btn: 'rgba(255,255,255,0.14)', btnSolid: '#3a3a41', accent: '#2570dc', onAccent: '#ffffff',
+      selBg: 'rgba(37,112,220,0.32)', sideSel: 'rgba(255,255,255,0.1)', track: 'rgba(255,255,255,0.12)', barC: 'rgba(110,165,245,0.85)',
+      green: '#4ade72', dotGreen: '#2f9e4f', orange: '#ffb340', waiting: 'rgba(255,255,255,0.18)',
+      sheet: '#2a2a30', scrim: 'rgba(0,0,0,0.35)', optSel: 'rgba(37,112,220,0.28)', opt: 'rgba(255,255,255,0.06)',
+      toast: '#3a3a41', toastText: '#f5f5f7', toastBtn: 'rgba(255,255,255,0.16)', macos: '#9a9aa0', other: '#6a6a72'
+    } : {
+      wall: '#9db3cd', blob1: '#5b8def', blob2: '#3fb8a9', blob3: '#ef8fa8', blob4: '#f2b45a',
+      win: 'rgba(246,246,250,0.55)', winSolid: '#f0f0f4', blur: '40px', edge: 'rgba(255,255,255,0.85)', rim: 'rgba(255,255,255,0.5)', hair: 'rgba(0,0,0,0.12)',
+      bar: 'rgba(255,255,255,0.25)', side: 'rgba(255,255,255,0.22)', pane: 'rgba(255,255,255,0.42)',
+      text: '#111114', sec: '#3d3d45', sep: 'rgba(0,0,0,0.08)', fill: 'rgba(0,0,0,0.05)', pill: 'rgba(0,0,0,0.07)',
+      control: 'rgba(255,255,255,0.7)', btn: 'rgba(255,255,255,0.75)', btnSolid: '#e4e4e9', accent: '#2570dc', onAccent: '#ffffff',
+      selBg: 'rgba(37,112,220,0.15)', sideSel: 'rgba(0,0,0,0.08)', track: 'rgba(0,0,0,0.08)', barC: 'rgba(37,112,220,0.7)',
+      green: '#16692c', dotGreen: '#1f8a3b', orange: '#9a4700', waiting: 'rgba(0,0,0,0.12)',
+      sheet: '#f7f7fa', scrim: 'rgba(0,0,0,0.18)', optSel: 'rgba(37,112,220,0.12)', opt: 'rgba(0,0,0,0.04)',
+      toast: '#2c2c31', toastText: '#f5f5f7', toastBtn: 'rgba(255,255,255,0.16)', macos: '#8e8e93', other: '#b8b8c0'
+    };
+    if (this.props.reduceTransparency) { t.win = t.winSolid; t.blur = '0px'; }
+
+    const s = this.state;
+    const idx = this.idx;
+    const fmt = (g) => g >= 10 ? Math.round(g) + ' GB' : g >= 1 ? g.toFixed(1) + ' GB' : Math.round(g * 1000) + ' MB';
+    const sizeOf = (nd) => (nd.upTo ? 'up to ' : '') + fmt(nd.gb);
+    const kids = (nd) => nd.kids.filter((k) => !s.gone[k.id]);
+    const SW = { macos: t.macos, dev: '#3b82d6', docker: '#2a9d9d', apps: '#e8a33a', claude: '#b4553a', projects: '#4caf5c', other: t.other };
+
+    const isMap = s.section === 'map';
+    const current = idx[s.stack[s.stack.length - 1]];
+    const q = s.query.trim().toLowerCase();
+    let list;
+    if (q) {
+      list = [];
+      const walk = (nd) => kids(nd).forEach((k) => { if (k.name.toLowerCase().indexOf(q) >= 0) list.push(k); walk(k); });
+      walk(current);
+    } else {
+      list = kids(current);
+    }
+    list = list.slice().sort((a, b) => b.gb - a.gb);
+    const max = list.reduce((m, k) => Math.max(m, k.gb), 0) || 1;
+    const rows = list.map((k) => {
+      const can = kids(k).length > 0;
+      const selected = s.sel === k.id;
+      return {
+        id: k.id, name: k.name, kind: k.kind || '', hasKind: !!k.kind, last: k.last || '',
+        sub: q ? 'in ' + idx[k.parent].name : '', hasSub: !!q,
+        size: sizeOf(k), barW: Math.max(2, k.gb / max * 100).toFixed(1) + '%',
+        isFile: !!k.file, isFolder: !k.file, iconColor: SW[k.id] || t.sec,
+        selected: selected, bg: selected ? t.selBg : 'transparent', canDrill: can,
+        select: () => this.setState({ sel: k.id }),
+        drill: () => { if (can) this.nav({ section: 'map', stack: s.stack.concat([k.id]) }); }
+      };
+    });
+
+    const crumbs = isMap ? s.stack.map((id, i) => ({
+      name: idx[id].name, notFirst: i > 0, current: i === s.stack.length - 1,
+      weight: i === s.stack.length - 1 ? '600' : '400',
+      go: () => { if (i < s.stack.length - 1) this.nav({ section: 'map', stack: s.stack.slice(0, i + 1) }); }
+    })) : [{ name: 'Offloaded', notFirst: false, current: true, weight: '600', go: () => {} }];
+
+    const activeSide = isMap ? (s.stack[1] || 'root') : '';
+    const sideIds = ['root', 'macos', 'dev', 'docker', 'apps', 'claude', 'projects', 'other'];
+    const side = sideIds.map((id) => {
+      const nd = idx[id];
+      const active = activeSide === id && (id !== 'root' || s.stack.length === 1);
+      return {
+        name: nd.name, size: id === 'root' ? '245 GB' : fmt(nd.gb), isDrive: id === 'root', isCat: id !== 'root',
+        swatch: SW[id] || t.sec, active: active, bg: active ? t.sideSel : 'transparent', weight: active ? '600' : '400',
+        pick: () => this.nav({ section: 'map', stack: id === 'root' ? ['root'] : ['root', id] })
+      };
+    });
+
+    const insp = (s.sel && idx[s.sel] && !s.gone[s.sel]) ? idx[s.sel] : current;
+    const blocked = insp.reason;
+    const inspVals = {
+      iName: insp.name, iPath: insp.path || '', iHasPath: !!insp.path,
+      iSize: insp.id === 'root' ? '227 GB used' : sizeOf(insp),
+      iHasLast: !!insp.last, iLast: insp.last === 'Today' ? 'Opened today' : 'Last opened ' + insp.last,
+      iUpTo: !!insp.upTo,
+      iGain: insp.upTo ? 'Shares space with copies elsewhere. Removing it gives back between ' + fmt(insp.minGb) + ' and ' + fmt(insp.gb) + '. Headroom measures the real gain after cleaning.' : '',
+      iKnows: insp.knows, iFile: !!insp.file, iFolder: !insp.file,
+      showClean: !!insp.clean, showOffload: !!insp.offload, showBin: !!insp.bin, showFda: !!insp.fda,
+      showFinder: insp.finder !== false, hasReason: !!blocked, iReason: blocked || '',
+      offloadBg: insp.clean ? t.btn : t.accent, offloadColor: insp.clean ? t.text : t.onAccent
+    };
+
+    const offRows = s.offloaded.map((o) => ({
+      name: o.name, where: o.where, date: o.date, size: fmt(o.gb),
+      connected: o.connected, disconnected: !o.connected, connectText: 'Connect ' + o.drive + ' to restore this.',
+      selected: s.offSel === o.id, bg: s.offSel === o.id ? t.selBg : 'transparent',
+      select: () => this.setState({ offSel: o.id, restore: null }),
+      restore: () => this.setState({ offSel: o.id, restore: { phase: 'confirm', step: 0 } })
+    }));
+    const off = s.offloaded.filter((o) => o.id === s.offSel)[0];
+    const r = s.restore;
+    const finishRestore = (keepCopy) => {
+      this.setState((st) => {
+        const gone = Object.assign({}, st.gone);
+        delete gone[off.id];
+        const left = st.offloaded.filter((o) => o.id !== off.id);
+        return {
+          offloaded: left, offSel: left.length ? left[0].id : null, restore: null, gone: gone,
+          toast: { text: off.name + ' is back in ' + off.back + '.' + (keepCopy ? ' The copy on ' + off.drive + ' is kept.' : '') }
+        };
+      });
+    };
+    const offVals = off ? {
+      hasOffSel: true, noOffSel: false, oName: off.name, oWhere: off.where, oDate: off.date, oSize: fmt(off.gb), oBack: off.back,
+      oConnected: off.connected, oDisconnected: !off.connected, oConnectText: 'Connect ' + off.drive + ' to restore this.',
+      oIdle: !r, oConfirm: !!r && r.phase === 'confirm', oProgress: !!r && r.phase === 'progress', oDone: !!r && r.phase === 'done',
+      oNeeds: 'Needs ' + fmt(off.gb) + '; ' + fmt(s.free) + ' free',
+      oConfirmLabel: 'Restore ' + fmt(off.gb),
+      oSteps: ['Copy back from ' + off.drive, 'Verify every file'].map((name, i) => {
+        const step = r ? r.step : 0;
+        const done = i < step;
+        return { name: name, done: done, status: done ? 'Done' : i === step ? 'Working…' : 'Waiting', dotBg: done ? t.dotGreen : i === step ? t.accent : t.waiting };
+      }),
+      oKeepQuestion: 'Keep the copy on ' + off.drive + ' as a backup, or delete it to free ' + fmt(off.gb) + ' on the drive?',
+      oDropLabel: 'Delete from ' + off.drive,
+      oAskRestore: () => this.setState({ restore: { phase: 'confirm', step: 0 } }),
+      oCancel: () => this.setState({ restore: null }),
+      oStart: () => {
+        this.setState({ restore: { phase: 'progress', step: 0 } });
+        this.tick((i) => this.setState({ restore: { phase: 'progress', step: i } }), 2,
+          () => this.setState((st) => ({ restore: { phase: 'done', step: 2 }, free: Math.max(0, st.free - off.gb) })));
+      },
+      oKeep: () => finishRestore(true), oDrop: () => finishRestore(false)
+    } : { hasOffSel: false, noOffSel: true, oIdle: true };
+
+    const sh = s.sheet;
+    const target = sh ? idx[sh.id] : null;
+    let sheetVals = { showSheet: false };
+    if (sh && target) {
+      const arc = sh.dest === 'arc';
+      const freed = arc ? target.gb * 0.4 : target.gb;
+      const stepNames = (target.quit ? ['Quit ' + target.quit] : [])
+        .concat([arc ? 'Compress into ~/Headroom Offload' : 'Copy ' + fmt(target.gb) + ' to T7', 'Verify every file', 'Remove from this Mac']);
+      const steps = sh.steps || stepNames;
+      sheetVals = {
+        showSheet: true, sheetTitle: sh.phase === 'done' ? 'Offloaded ' + target.name : 'Offload “' + target.name + '”',
+        shChoose: sh.phase === 'choose', shProgress: sh.phase === 'progress', shDone: sh.phase === 'done',
+        destT7: !arc, destArc: arc, arcDisabled: !target.compress, arcOpacity: target.compress ? '1' : '0.6',
+        t7Bg: !arc ? t.optSel : t.opt, arcBg: arc ? t.optSel : t.opt,
+        arcLine: target.compress ? 'In ~/Headroom Offload. About 40% smaller, measured after.' : (target.arcReason || 'This kind of file barely compresses.'),
+        aliasNote: target.user
+          ? 'An alias named “' + target.name + ' (offloaded)” stays in its folder, so you can find it.'
+          : 'App data gets no alias, so the app can’t follow it to the drive.',
+        shHasQuit: !!target.quit, shQuitNote: target.quit ? target.quit + ' is open. Headroom will quit it first.' : '',
+        offloadLabel: arc ? 'Compress and free about ' + fmt(freed) : 'Offload to T7 and remove ' + fmt(target.gb) + ' from this Mac',
+        shSteps: steps.map((name, i) => {
+          const done = i < sh.step;
+          const cur = i === sh.step;
+          return { name: name, done: done, status: done ? 'Done' : cur ? 'Working…' : 'Waiting', statusColor: done ? t.green : t.sec, dotBg: done ? t.dotGreen : cur ? t.accent : t.waiting };
+        }),
+        doneLine: arc
+          ? 'Compressed into ~/Headroom Offload. ' + fmt(freed) + ' freed, measured.'
+          : 'Offloaded to T7. ' + fmt(target.gb) + ' freed, measured.',
+        pickT7: () => this.setState({ sheet: Object.assign({}, sh, { dest: 't7' }) }),
+        pickArc: () => { if (target.compress) this.setState({ sheet: Object.assign({}, sh, { dest: 'arc' }) }); },
+        closeSheet: () => { clearInterval(this.timer); this.setState({ sheet: null }); },
+        startOffload: () => {
+          this.setState({ sheet: Object.assign({}, sh, { phase: 'progress', step: 0, steps: stepNames }) });
+          this.tick((i) => this.setState((st) => ({ sheet: Object.assign({}, st.sheet, { step: i }) })), stepNames.length,
+            () => this.setState((st) => ({
+              sheet: Object.assign({}, st.sheet, { phase: 'done', step: stepNames.length }),
+              gone: Object.assign({}, st.gone, { [target.id]: true }), sel: null, free: st.free + freed,
+              offloaded: [{
+                id: target.id, name: target.name, gb: arc ? target.gb * 0.6 : target.gb,
+                where: arc ? 'In ~/Headroom Offload, compressed' : 'On T7 · Headroom Offload', date: 'Offloaded today',
+                drive: arc ? 'this Mac' : 'T7', connected: true, back: target.path.replace(/\/[^/]+$/, '')
+              }].concat(st.offloaded)
+            })));
+        },
+        stopOffload: () => {
+          clearInterval(this.timer);
+          this.setState({ sheet: null, toast: { text: 'Stopped. ' + target.name + ' is untouched, and the partial copy was removed.' } });
+        }
+      };
+    }
+
+    const listTitle = q ? 'Results for “' + s.query.trim() + '”' : current.name;
+    const listSub = current.id === 'root' ? '227 GB used of 245 GB' : sizeOf(current) + (kids(current).length ? ' in ' + kids(current).length + ' items' : '');
+
+    return Object.assign({
+      t: t, isMap: isMap, isOff: !isMap, crumbs: crumbs, side: side,
+      noBack: s.back.length === 0, noFwd: s.fwd.length === 0,
+      backOpacity: s.back.length ? '1' : '0.45', fwdOpacity: s.fwd.length ? '1' : '0.45',
+      goBack: () => this.setState((st) => {
+        if (!st.back.length) return null;
+        const prev = st.back[st.back.length - 1];
+        return { back: st.back.slice(0, -1), fwd: st.fwd.concat([{ section: st.section, stack: st.stack }]), section: prev.section, stack: prev.stack, sel: null, query: '' };
+      }),
+      goFwd: () => this.setState((st) => {
+        if (!st.fwd.length) return null;
+        const nx = st.fwd[st.fwd.length - 1];
+        return { fwd: st.fwd.slice(0, -1), back: st.back.concat([{ section: st.section, stack: st.stack }]), section: nx.section, stack: nx.stack, sel: null, query: '' };
+      }),
+      query: s.query, setQuery: (e) => this.setState({ query: e.target.value, sel: null }),
+      rows: rows, noRows: rows.length === 0,
+      emptyText: q ? 'Nothing here matches “' + s.query.trim() + '”.' : 'This folder is empty.',
+      listTitle: listTitle, listSub: listSub,
+      offActive: !isMap, offBg: !isMap ? t.sideSel : 'transparent', offWeight: !isMap ? '600' : '400',
+      offCount: String(s.offloaded.length),
+      pickOffloaded: () => this.nav({ section: 'off' }),
+      offRows: offRows, noOff: s.offloaded.length === 0,
+      openOffload: () => this.setState({ sheet: { id: insp.id, phase: 'choose', dest: 't7', step: 0 } }),
+      moveToBin: () => this.setState((st) => ({
+        gone: Object.assign({}, st.gone, { [insp.id]: true }), sel: null,
+        toast: { text: 'Moved ' + insp.name + ' to the Bin. Empty the Bin to free ' + fmt(insp.gb) + '.', undo: insp.id }
+      })),
+      putBack: () => this.setState((st) => {
+        const gone = Object.assign({}, st.gone);
+        if (st.toast && st.toast.undo) delete gone[st.toast.undo];
+        return { gone: gone, toast: { text: 'Put back where it was.' } };
+      }),
+      showInFinder: () => this.setState({ toast: { text: 'Shown in Finder.' } }),
+      openPrivacy: () => this.setState({ toast: { text: 'System Settings opens at Privacy & Security › Full Disk Access.' } }),
+      hasToast: !!s.toast, toastText: s.toast ? s.toast.text : '', toastUndo: !!(s.toast && s.toast.undo),
+      dismissToast: () => this.setState({ toast: null }),
+      freeLabel: fmt(s.free)
+    }, inspVals, offVals, sheetVals);
+  }
+}
+</script>
+</body>
+</html>
