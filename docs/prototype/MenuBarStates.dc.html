@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Headroom menu bar item states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2570dc}a:hover{color:#0b4fb0}
+</style>
+</helmet>
+<div style="width: 760px; height: 440px; box-sizing: border-box; padding: 32px; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; color: #1d1d1f; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; -webkit-font-smoothing: antialiased">
+<sc-for list="{{themes}}" as="th" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 15px; font-weight: 600">{{th.name}}</span>
+<div style="position: relative; overflow: hidden; border-radius: 16px; background: {{th.wall}}; padding: 8px; display: flex; flex-direction: column; gap: 8px">
+<span aria-hidden="true" style="position: absolute; left: -40px; top: 120px; width: 260px; height: 240px; border-radius: 50%; background: {{th.b1}}; filter: blur(50px); opacity: 0.85"></span>
+<span aria-hidden="true" style="position: absolute; left: 180px; top: -60px; width: 240px; height: 220px; border-radius: 50%; background: {{th.b2}}; filter: blur(50px); opacity: 0.8"></span>
+<sc-for list="{{th.rows}}" as="r" hint-placeholder-count="5">
+<div style="position: relative; height: 34px; border-radius: 10px; background: {{th.bar}}; backdrop-filter: blur(24px) saturate(1.6); -webkit-backdrop-filter: blur(24px) saturate(1.6); box-shadow: inset 0 1px 0 {{th.edge}}; color: {{th.text}}; display: flex; align-items: center; justify-content: space-between; padding: 0 10px">
+<span style="font-size: 12px; color: {{th.sec}}">{{r.state}}</span>
+<span style="display: flex; align-items: center; gap: 5px; color: {{r.color}}">
+<span style="position: relative; display: inline-flex">
+<svg aria-hidden="true" width="17" height="13" viewBox="0 0 17 13"><rect x="0.8" y="2.3" width="15.4" height="9.4" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.4"></rect><path d="M3.2 8.6h5.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="13" cy="8.6" r="1" fill="currentColor"></circle></svg>
+<sc-if value="{{r.dot}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: -2px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: {{r.dotColor}}; box-shadow: 0 0 0 1.5px {{th.wall}}"></span></sc-if>
+</span>
+<span style="font-weight: 500; font-variant-numeric: tabular-nums">{{r.label}}</span>
+</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const make = (name, wall, bar, text, sec, orange, red, b1, b2, edge) => ({
+      name: name, wall: wall, bar: bar, text: text, sec: sec, b1: b1, b2: b2, edge: edge,
+      rows: [
+        { state: 'Healthy', label: '29 GB', color: text, dot: false, dotColor: orange },
+        { state: 'Below 20 GB warning', label: '14 GB', color: text, dot: true, dotColor: orange },
+        { state: 'Below 10 GB, critical', label: '6 GB', color: red, dot: true, dotColor: red },
+        { state: 'Percentage setting', label: '12%', color: text, dot: false, dotColor: orange },
+        { state: 'Icon only setting', label: '', color: text, dot: false, dotColor: orange }
+      ]
+    });
+    return {
+      themes: [
+        make('Light', '#9db3cd', 'rgba(255,255,255,0.3)', '#111114', '#2f2f36', '#a85000', '#b0001a', '#5b8def', '#ef8fa8', 'rgba(255,255,255,0.7)'),
+        make('Dark', '#141c2b', 'rgba(20,20,26,0.3)', '#f5f5f7', '#d0d0d6', '#ffb340', '#ff6b61', '#2d5aa8', '#8a3f6a', 'rgba(255,255,255,0.16)')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

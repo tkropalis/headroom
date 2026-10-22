@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Headroom menu bar popover</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2570dc}a:hover{color:#0b4fb0}
+button{font:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid rgba(37,112,220,.55);outline-offset:1px}
+</style>
+</helmet>
+<div style="width: 1000px; height: 780px; position: relative; overflow: hidden; background: {{t.wall}}; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif; font-size: 13px; color: {{t.text}}; -webkit-font-smoothing: antialiased">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden">
+<span style="position: absolute; left: -80px; top: 380px; width: 520px; height: 520px; border-radius: 50%; background: {{t.blob1}}; filter: blur(80px); opacity: 0.85"></span>
+<span style="position: absolute; left: 520px; top: -120px; width: 480px; height: 420px; border-radius: 50%; background: {{t.blob4}}; filter: blur(80px); opacity: 0.8"></span>
+<span style="position: absolute; left: 700px; top: 300px; width: 420px; height: 460px; border-radius: 50%; background: {{t.blob3}}; filter: blur(80px); opacity: 0.8"></span>
+<span style="position: absolute; left: 300px; top: 520px; width: 460px; height: 360px; border-radius: 50%; background: {{t.blob2}}; filter: blur(80px); opacity: 0.8"></span>
+</div>
+
+<div style="position: relative; height: 34px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; background: {{t.menubar}}; color: {{t.menuText}}; backdrop-filter: blur({{t.blur}}) saturate(1.6); -webkit-backdrop-filter: blur({{t.blur}}) saturate(1.6)">
+<div style="display: flex; align-items: center; gap: 18px; font-size: 13px">
+<span style="font-weight: 700">Code</span>
+<span>File</span>
+<span>Edit</span>
+<span>Selection</span>
+<span>View</span>
+<span>Go</span>
+<span>Terminal</span>
+<span>Window</span>
+<span>Help</span>
+</div>
+<div style="display: flex; align-items: center; gap: 6px">
+<svg aria-hidden="true" width="18" height="14" viewBox="0 0 18 14" style="margin: 0 6px"><path d="M1.5 5.2a10.6 10.6 0 0 1 15 0M4 7.8a7 7 0 0 1 10 0M6.6 10.4a3.3 3.3 0 0 1 4.8 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><circle cx="9" cy="12.6" r="1.1" fill="currentColor"></circle></svg>
+<svg aria-hidden="true" width="26" height="13" viewBox="0 0 26 13" style="margin: 0 6px"><rect x="0.75" y="0.75" width="21.5" height="11.5" rx="3.2" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"></rect><rect x="2.6" y="2.6" width="15" height="7.8" rx="1.8" fill="currentColor"></rect><path d="M23.6 4.4v4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.55"></path></svg>
+<button type="button" aria-label="Headroom, {{menuLabel}} free" aria-expanded="{{open}}" onClick="{{togglePopover}}" style="height: 24px; display: flex; align-items: center; gap: 5px; padding: 0 8px; border: 0; border-radius: 6px; background: {{menuItemBg}}; color: {{menuItemColor}}; cursor: default">
+<span style="position: relative; display: inline-flex">
+<svg aria-hidden="true" width="17" height="13" viewBox="0 0 17 13"><rect x="0.8" y="2.3" width="15.4" height="9.4" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.4"></rect><path d="M3.2 8.6h5.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="13" cy="8.6" r="1" fill="currentColor"></circle></svg>
+<sc-if value="{{showDot}}" hint-placeholder-val="{{false}}">
+<span style="position: absolute; top: -2px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: {{dotColor}}; box-shadow: 0 0 0 1.5px {{t.wall}}"></span>
+</sc-if>
+</span>
+<span style="font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums">{{menuLabel}}</span>
+</button>
+<span style="margin-left: 8px; font-variant-numeric: tabular-nums">Thu 22 Oct  12:48</span>
+</div>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 36px; top: 70px; width: 560px; height: 620px; border-radius: 12px; background: {{t.window}}; box-shadow: 0 18px 50px rgba(0,0,0,0.25); overflow: hidden">
+<div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: {{t.windowBar}}">
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f57"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #febc2e"></span>
+<span style="width: 12px; height: 12px; border-radius: 50%; background: #28c840"></span>
+<span style="margin-left: 12px; font-size: 12px; color: {{t.sec}}">ilov2front — page.tsx</span>
+</div>
+<div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 9px">
+<span style="width: 62%; height: 8px; border-radius: 4px; background: {{t.codeLine}}"></span>
+<span style="width: 48%; height: 8px; border-radius: 4px; background: {{t.codeLine}}; margin-left: 24px"></span>
+<span style="width: 70%; height: 8px; border-radius: 4px; background: {{t.codeLine}}; margin-left: 24px"></span>
+<span style="width: 35%; height: 8px; border-radius: 4px; background: {{t.codeLine}}; margin-left: 48px"></span>
+<span style="width: 54%; height: 8px; border-radius: 4px; background: {{t.codeLine}}; margin-left: 48px"></span>
+<span style="width: 22%; height: 8px; border-radius: 4px; background: {{t.codeLine}}; margin-left: 24px"></span>
+<span style="width: 40%; height: 8px; border-radius: 4px; background: {{t.codeLine}}"></span>
+</div>
+</div>
+
+<sc-if value="{{open}}" hint-placeholder-val="{{true}}">
+<div role="dialog" aria-label="Headroom" style="position: absolute; top: 40px; right: 128px; width: 352px; max-height: 728px; overflow-y: auto; box-sizing: border-box; border-radius: 20px; background: {{t.pop}}; backdrop-filter: blur({{t.blur}}) saturate(1.9); -webkit-backdrop-filter: blur({{t.blur}}) saturate(1.9); box-shadow: 0 20px 56px rgba(0,0,0,0.26), inset 0 1px 0 {{t.edge}}, inset 0 0 0 0.5px {{t.rim}}, 0 0 0 0.5px {{t.hair}}; padding: 14px 0 6px; display: flex; flex-direction: column">
+
+<sc-if value="{{isMain}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 0 16px 12px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: baseline; gap: 6px">
+<span style="font-size: 26px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: {{bigColor}}">{{freeLabel}}</span>
+<span style="font-size: 15px; color: {{t.sec}}">free</span>
+</div>
+<div style="font-size: 12px; color: {{subColor}}; font-variant-numeric: tabular-nums">{{subLine}}</div>
+<div style="position: relative; height: 10px; border-radius: 5px; background: {{t.track}}; display: flex; overflow: hidden; margin-top: 4px">
+<sc-for list="{{segments}}" as="s" hint-placeholder-count="7">
+<span title="{{s.name}}" style="height: 100%; width: {{s.w}}; background: {{s.c}}; box-shadow: inset -1px 0 0 {{t.pop}}"></span>
+</sc-for>
+</div>
+<div style="position: relative; height: 0">
+<span aria-hidden="true" style="position: absolute; top: -16px; left: {{tickLeft}}; width: 2px; height: 14px; border-radius: 1px; background: {{t.text}}; opacity: 0.55"></span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: {{t.sec}}">
+<sc-for list="{{segments}}" as="s" hint-placeholder-count="7">
+<span style="display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{s.c}}"></span>{{s.name}} {{s.label}}</span>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{showAlert}}" hint-placeholder-val="{{false}}">
+<div style="margin: 0 10px 10px; padding: 10px 12px; border-radius: 10px; background: {{t.orangeTint}}; display: flex; gap: 10px; align-items: flex-start">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" style="flex: none; margin-top: 1px; color: {{t.orange}}"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600">Chrome temporary copies grew 9.1 GB</span>
+<span style="font-size: 12px; color: {{t.sec}}">Since yesterday. Chrome left 34 copies of itself after updates.</span>
+</div>
+<button type="button" onClick="{{openGrowth}}" style="flex: none; height: 24px; padding: 0 10px; border: 0; border-radius: 12px; background: {{t.btn}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Review</button>
+</div>
+</sc-if>
+
+<div style="height: 1px; background: {{t.sep}}; margin: 0 16px"></div>
+
+<div style="padding: 12px 16px; display: flex; align-items: center; gap: 12px">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-weight: 600">{{readyTitle}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{readyLine}}</span>
+<span style="font-size: 12px; color: {{t.sec}}">1.7 GB more once the ilov2front dev server stops.</span>
+</div>
+<sc-if value="{{canReview}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{openReview}}" style="flex: none; height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{reviewBg}}; color: {{reviewColor}}; font-size: 13px; font-weight: 500">Review…</button>
+</sc-if>
+</div>
+
+<div style="height: 1px; background: {{t.sep}}; margin: 0 16px"></div>
+
+<div style="padding: 6px 6px; display: flex; flex-direction: column">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column">
+<button type="button" aria-expanded="{{g.open}}" onClick="{{g.toggle}}" style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 0; border-radius: 7px; background: {{g.rowBg}}; color: {{t.text}}; text-align: left">
+<svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10" style="flex: none; transform: {{g.chev}}; transition: transform 160ms ease-out; color: {{t.sec}}"><path d="M3.5 1.8 6.7 5 3.5 8.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="flex: 1">{{g.title}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{g.size}}</span>
+</button>
+<sc-if value="{{g.open}}" hint-placeholder-val="{{false}}">
+<div style="padding: 2px 10px 8px 28px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 12px; color: {{t.sec}}">{{g.note}}</span>
+<sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
+<div style="display: flex; gap: 10px">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span>{{it.name}}</span>
+<span style="font-size: 12px; color: {{t.sec}}">{{it.cost}}</span>
+</div>
+<span style="flex: none; font-size: 12px; font-variant-numeric: tabular-nums">{{it.size}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<div style="height: 1px; background: {{t.sep}}; margin: 0 16px"></div>
+
+<div style="padding: 10px 16px 6px; display: flex; align-items: center; justify-content: space-between">
+<span style="font-size: 12px; color: {{t.sec}}">{{scanLine}}</span>
+<button type="button" onClick="{{scanNow}}" style="height: 24px; padding: 0 10px; border: 0; border-radius: 12px; background: {{t.btn}}; color: {{t.text}}; font-size: 12px; font-weight: 500">Scan Now</button>
+</div>
+<div style="padding: 0 6px; display: flex; flex-direction: column">
+<a href="Settings.dc.html" style="height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-radius: 7px; color: {{t.text}}; text-decoration: none">Settings…<span style="color: {{t.sec}}">⌘,</span></a>
+<button type="button" style="height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: {{t.text}}; text-align: left">Quit Headroom<span style="color: {{t.sec}}">⌘Q</span></button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isReview}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 0 10px 10px; display: flex; align-items: center; gap: 6px">
+<button type="button" aria-label="Back" onClick="{{goMain}}" style="width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: {{t.text}}"><svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12"><path d="M7 1.5 2.5 6 7 10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+<span style="font-size: 15px; font-weight: 600">Review cleanup</span>
+</div>
+<div style="padding: 0 16px 8px; font-size: 12px; color: {{t.sec}}">Nothing is removed until you confirm below.</div>
+<div style="padding: 0 6px; display: flex; flex-direction: column">
+<sc-for list="{{items}}" as="item" hint-placeholder-count="6">
+<label for="cb-{{item.id}}" style="display: flex; gap: 10px; padding: 8px 10px; border-radius: 8px; opacity: {{item.opacity}}">
+<input type="checkbox" id="cb-{{item.id}}" checked="{{item.checked}}" disabled="{{item.disabled}}" onChange="{{item.toggle}}" style="flex: none; width: 15px; height: 15px; margin: 1px 0 0; accent-color: {{t.accent}}">
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="display: flex; gap: 8px; justify-content: space-between"><span>{{item.name}}</span><span style="flex: none; font-variant-numeric: tabular-nums">{{item.sizeLabel}}</span></span>
+<span style="font-size: 12px; color: {{t.sec}}">{{item.cost}}</span>
+<sc-if value="{{item.hasBlocker}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; color: {{item.blockerColor}}">{{item.blocker}}</span>
+</sc-if>
+</span>
+</label>
+</sc-for>
+</div>
+<div style="height: 1px; background: {{t.sep}}; margin: 6px 16px 0"></div>
+<div style="padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{selLine}}</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{goMain}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}; font-size: 13px">Cancel</button>
+<button type="button" disabled="{{noneSelected}}" onClick="{{confirmClean}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500; opacity: {{confirmOpacity}}">{{confirmLabel}}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isGrowth}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 0 10px 10px; display: flex; align-items: center; gap: 6px">
+<button type="button" aria-label="Back" onClick="{{goMain}}" style="width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: {{t.text}}"><svg aria-hidden="true" width="10" height="12" viewBox="0 0 10 12"><path d="M7 1.5 2.5 6 7 10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+<span style="font-size: 15px; font-weight: 600">Chrome temporary copies</span>
+</div>
+<div style="padding: 0 16px 12px; display: flex; flex-direction: column; gap: 12px">
+<span style="font-size: 12px; color: {{t.sec}}; overflow-wrap: anywhere">/var/folders/…/X/com.google.Chrome.code_sign_clone</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<div style="padding: 10px 12px; border-radius: 10px; background: {{t.fill}}; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: {{t.sec}}">Yesterday</span><span style="font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums">0 GB</span></div>
+<div style="padding: 10px 12px; border-radius: 10px; background: {{t.fill}}; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: {{t.sec}}">Today</span><span style="font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums">9.1 GB</span></div>
+</div>
+<span style="line-height: 1.45">Each time Chrome restarts after an update, macOS makes a temporary copy of it. These 34 copies were never removed. Chrome isn't running, so they can go now.</span>
+<span style="font-size: 12px; color: {{t.sec}}; line-height: 1.45">Finder may show these as 48 GB because the copies share space. 9.1 GB is what deleting them gives back.</span>
+<div style="display: flex; gap: 8px; justify-content: flex-end">
+<button type="button" onClick="{{ignoreGrowth}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}; font-size: 13px">Ignore</button>
+<button type="button" onClick="{{cleanGrowth}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500">Delete copies, 9.1 GB</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isCleaning}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 0 16px 10px; font-size: 15px; font-weight: 600">Cleaning…</div>
+<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{progress}}" as="p" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 10px">
+<span style="flex: none; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; background: {{p.dotBg}}; color: {{t.onAccent}}">
+<sc-if value="{{p.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M2 5.2 4.2 7.4 8 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+</span>
+<span style="flex: 1; min-width: 0">{{p.name}}</span>
+<span style="flex: none; font-size: 12px; color: {{p.statusColor}}; font-variant-numeric: tabular-nums">{{p.status}}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding: 14px 16px 8px; display: flex; justify-content: flex-end">
+<button type="button" onClick="{{stopClean}}" style="height: 28px; padding: 0 14px; border: 0; border-radius: 14px; background: {{t.btn}}; color: {{t.text}}; font-size: 13px">Stop after this item</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isResult}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 0 16px 12px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums">Freed {{lastFreedLabel}}</span>
+<span style="font-size: 12px; color: {{t.sec}}; font-variant-numeric: tabular-nums">{{freeLabel}} free now · measured from free space before and after</span>
+</div>
+<div style="padding: 0 16px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{doneItems}}" as="d" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; font-variant-numeric: tabular-nums"><span style="flex: 1; min-width: 0">{{d.name}}</span><span style="color: {{t.green}}">{{d.label}}</span></div>
+</sc-for>
+</div>
+<div style="padding: 14px 16px 8px; display: flex; justify-content: flex-end">
+<button type="button" onClick="{{goMain}}" style="height: 28px; padding: 0 16px; border: 0; border-radius: 14px; background: {{t.accent}}; color: {{t.onAccent}}; font-size: 13px; font-weight: 500">Done</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"scenario":{"editor":"enum","options":["Healthy","Low","Critical","Growth alert"],"default":"Healthy"},"appearance":{"editor":"enum","options":["Light","Dark"],"default":"Light"},"reduceTransparency":{"editor":"boolean","default":false},"$preview":{"width":1000,"height":780}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      open: true, screen: 'main', expanded: '',
+      sel: { npm: true, spotify: true, oikos: true, metro: true, vscode: false },
+      queue: [], step: 0, freed: 0, lastFreed: 0, doneItems: [],
+      cleaned: false, alertDone: false, scanned: '12 min ago'
+    };
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  runClean(queue, mode) {
+    clearInterval(this.timer);
+    this.setState({ screen: 'cleaning', queue: queue, step: 0 });
+    this.timer = setInterval(() => {
+      this.setState((s) => {
+        const step = s.step + 1;
+        if (step < s.queue.length) return { step: step };
+        clearInterval(this.timer);
+        return this.finish(s, s.queue, mode);
+      });
+    }, 700);
+  }
+  finish(s, done, mode) {
+    const total = done.reduce((a, i) => a + i.measured, 0);
+    return {
+      step: done.length, screen: 'result', doneItems: done,
+      freed: s.freed + total, lastFreed: total,
+      cleaned: s.cleaned || mode === 'caches',
+      alertDone: s.alertDone || mode === 'growth',
+      sel: mode === 'caches' ? {} : s.sel
+    };
+  }
+
+  renderVals() {
+    const dark = (this.props.appearance ?? 'Light') === 'Dark';
+    const scenario = this.props.scenario ?? 'Healthy';
+    const t = dark ? {
+      wall: '#141c2b', blob1: '#2d5aa8', blob2: '#1d7a72', blob3: '#8a3f6a', blob4: '#9a6a22',
+      menubar: 'rgba(20,20,26,0.22)', menuText: '#f5f5f7', window: '#1e1f22', windowBar: '#2a2b2f', codeLine: 'rgba(255,255,255,0.12)',
+      pop: 'rgba(32,32,38,0.48)', popSolid: '#26262b', blur: '40px', edge: 'rgba(255,255,255,0.22)', rim: 'rgba(255,255,255,0.14)',
+      text: '#f5f5f7', sec: '#c4c4cb', hair: 'rgba(0,0,0,0.4)', sep: 'rgba(255,255,255,0.12)',
+      fill: 'rgba(255,255,255,0.08)', btn: 'rgba(255,255,255,0.14)', accent: '#2570dc', onAccent: '#ffffff',
+      green: '#4ade72', orange: '#ffb340', orangeTint: 'rgba(255,159,10,0.18)', red: '#ff6b61', track: 'rgba(255,255,255,0.14)',
+      itemActive: 'rgba(255,255,255,0.2)', rowActive: 'rgba(255,255,255,0.08)', other: '#6a6a72', macos: '#9a9aa0'
+    } : {
+      wall: '#9db3cd', blob1: '#5b8def', blob2: '#3fb8a9', blob3: '#ef8fa8', blob4: '#f2b45a',
+      menubar: 'rgba(255,255,255,0.22)', menuText: '#111114', window: '#f4f5f7', windowBar: '#e6e8ec', codeLine: 'rgba(0,0,0,0.09)',
+      pop: 'rgba(248,248,252,0.52)', popSolid: '#f2f2f5', blur: '40px', edge: 'rgba(255,255,255,0.85)', rim: 'rgba(255,255,255,0.5)',
+      text: '#111114', sec: '#3d3d45', hair: 'rgba(0,0,0,0.12)', sep: 'rgba(0,0,0,0.1)',
+      fill: 'rgba(255,255,255,0.4)', btn: 'rgba(255,255,255,0.55)', accent: '#2570dc', onAccent: '#ffffff',
+      green: '#16692c', orange: '#9a4700', orangeTint: 'rgba(255,170,60,0.28)', red: '#b0001a', track: 'rgba(0,0,0,0.1)',
+      itemActive: 'rgba(255,255,255,0.45)', rowActive: 'rgba(255,255,255,0.35)', other: '#d4d4da', macos: '#8e8e93'
+    };
+    if (this.props.reduceTransparency) { t.pop = t.popSolid; t.blur = '0px'; t.menubar = dark ? '#1c1c20' : '#e8e8ec'; }
+    const CAP = 245, WARN = 20, CRIT = 10;
+    const base = { 'Healthy': 29, 'Low': 14, 'Critical': 6, 'Growth alert': 29 }[scenario] ?? 29;
+    const free = base + this.state.freed;
+    const fmt = (g) => g >= 10 ? Math.round(g) + ' GB' : g >= 1 ? g.toFixed(1) + ' GB' : Math.round(g * 1000) + ' MB';
+    const level = free < CRIT ? 'critical' : free < WARN ? 'low' : 'ok';
+    const s = this.state;
+    const go = (screen) => () => this.setState({ screen: screen });
+
+    const fixed = [
+      { name: 'macOS', gb: 56, c: t.macos }, { name: 'Developer', gb: 39, c: '#3b82d6' },
+      { name: 'Docker', gb: 26, c: '#2a9d9d' }, { name: 'Apps', gb: 21, c: '#e8a33a' },
+      { name: 'Claude', gb: 17, c: '#b4553a' }, { name: 'Projects', gb: 11, c: '#4caf5c' }
+    ];
+    const used = CAP - free;
+    const other = used - fixed.reduce((a, x) => a + x.gb, 0);
+    const segments = fixed.concat([{ name: 'Other', gb: other, c: t.other }]).map((x) => ({
+      name: x.name, c: x.c, label: fmt(x.gb), w: (x.gb / CAP * 100).toFixed(2) + '%'
+    }));
+
+    const ITEMS = [
+      { id: 'npm', name: 'npm download cache', gb: 0.9, measured: 0.9, cost: 'Nothing lost. npm downloads packages again when needed.' },
+      { id: 'spotify', name: 'Spotify cache', gb: 0.6, measured: 0.55, cost: 'Nothing lost. Streamed songs load again.', quit: 'Spotify', blocker: 'Spotify is open. Headroom will quit it first.' },
+      { id: 'oikos', name: 'oikos build cache', gb: 0.6, measured: 0.58, cost: 'The next dev start in oikos is slower once.' },
+      { id: 'metro', name: 'Metro bundler cache', gb: 0.2, measured: 0.19, cost: 'Nothing lost. Rebuilt on the next Expo start.' },
+      { id: 'vscode', name: 'VS Code caches and logs', gb: 0.3, measured: 0.28, cost: 'Nothing lost. Settings and extensions stay.', quit: 'VS Code', blocker: 'VS Code is open. Tick to quit it and clean.' },
+      { id: 'ilo', name: 'ilov2front build cache', gb: 1.7, measured: 0, cost: 'The next dev start is slower once.', disabled: true, blocker: 'The ilov2front dev server is running. Stop it to clean this.' }
+    ];
+    const available = s.cleaned ? [] : ITEMS;
+    const chosen = available.filter((i) => !i.disabled && s.sel[i.id]);
+    const selGb = chosen.reduce((a, i) => a + i.gb, 0);
+    const quits = chosen.filter((i) => i.quit).map((i) => i.quit);
+    const items = available.map((i) => ({
+      id: i.id, name: i.name, cost: i.cost, sizeLabel: fmt(i.gb),
+      checked: !i.disabled && !!s.sel[i.id], disabled: !!i.disabled,
+      opacity: i.disabled ? '0.6' : '1',
+      hasBlocker: !!i.blocker && (i.disabled || !!s.sel[i.id] || i.id === 'vscode'),
+      blocker: i.blocker, blockerColor: i.disabled ? t.sec : t.orange,
+      toggle: () => this.setState((st) => ({ sel: Object.assign({}, st.sel, { [i.id]: !st.sel[i.id] }) }))
+    }));
+    const defaultReady = ITEMS.filter((i) => ['npm', 'spotify', 'oikos', 'metro'].indexOf(i.id) >= 0);
+    const readyGb = defaultReady.reduce((a, i) => a + i.gb, 0);
+
+    const GROUPS = [
+      { id: 'rebuild', title: 'Rebuilds on use', size: 'up to 35 GB', note: 'Nothing is lost, but the next build or launch is slower.', items: [
+        { name: 'Unused Docker images', size: 'up to 21 GB', cost: 'Base images download again. Volumes stay.' },
+        { name: 'Gradle caches', size: '8.8 GB', cost: 'The next Android build downloads what it needs.' },
+        { name: 'iOS Simulator caches', size: '3.2 GB', cost: 'Needs your password. First boot is slower.' },
+        { name: 'Old VS Code workspace data', size: 'up to 2.1 GB', cost: 'Folders not opened in 60 days lose open tabs.' } ] },
+      { id: 'call', title: 'Your call', size: 'up to 20 GB', note: 'Each of these loses something. Removed items go to the Bin.', items: [
+        { name: 'Claude VM image', size: '9.3 GB', cost: 'Downloads again when Claude next needs it.' },
+        { name: 'Games', size: '4.6 GB', cost: 'Minecraft, Steam and Paradox data, saves included.' },
+        { name: 'MAMP', size: '3.2 GB', cost: 'Export its databases first.' },
+        { name: 'Claude Code history over 60 days', size: 'up to 2.7 GB', cost: 'Old sessions can no longer be resumed.' } ] },
+      { id: 'dormant', title: 'Dormant projects', size: '1.2 GB · 3', note: 'No commit or edit in 90 days. The code stays; dependencies reinstall.', items: [
+        { name: 'nexus', size: '570 MB', cost: '.venv · last commit 7 Apr' },
+        { name: 'ergazomenos', size: '320 MB', cost: 'node_modules and vendor · last commit 13 Jul' },
+        { name: 'job-agent', size: '280 MB', cost: '.venv · last edit 28 Aug, no git' } ] }
+    ];
+    const groups = GROUPS.map((g) => {
+      const isOpen = s.expanded === g.id;
+      return {
+        title: g.title, size: g.size, note: g.note, items: g.items, open: isOpen,
+        chev: isOpen ? 'rotate(90deg)' : 'none', rowBg: isOpen ? t.rowActive : 'transparent',
+        toggle: () => this.setState((st) => ({ expanded: st.expanded === g.id ? '' : g.id }))
+      };
+    });
+
+    const progress = s.queue.map((q, idx) => {
+      const done = idx < s.step;
+      const cur = idx === s.step;
+      return {
+        name: q.name, done: done,
+        status: done ? fmt(q.measured) : cur ? 'Cleaning…' : 'Waiting',
+        statusColor: done ? t.green : t.sec,
+        dotBg: done ? t.green : cur ? t.accent : t.track
+      };
+    });
+
+    return {
+      t: t,
+      open: s.open,
+      togglePopover: () => this.setState((st) => ({ open: !st.open })),
+      menuLabel: Math.round(free) + ' GB',
+      menuItemBg: s.open ? t.itemActive : 'transparent',
+      menuItemColor: level === 'critical' ? t.red : t.menuText,
+      showDot: level !== 'ok',
+      dotColor: level === 'critical' ? t.red : t.orange,
+      isMain: s.screen === 'main', isReview: s.screen === 'review', isGrowth: s.screen === 'growth',
+      isCleaning: s.screen === 'cleaning', isResult: s.screen === 'result',
+      freeLabel: fmt(free),
+      bigColor: level === 'critical' ? t.red : t.text,
+      subLine: free >= WARN
+        ? 'of 245 GB · ' + Math.round(free - WARN) + ' GB above your 20 GB warning'
+        : 'of 245 GB · ' + Math.round(WARN - free) + ' GB below your 20 GB warning',
+      subColor: level === 'critical' ? t.red : level === 'low' ? t.orange : t.sec,
+      segments: segments,
+      tickLeft: ((CAP - WARN) / CAP * 100).toFixed(2) + '%',
+      showAlert: scenario === 'Growth alert' && !s.alertDone,
+      openGrowth: go('growth'),
+      ignoreGrowth: () => this.setState({ alertDone: true, screen: 'main' }),
+      cleanGrowth: () => this.runClean([{ name: 'Chrome temporary copies', gb: 9.1, measured: 9.1 }], 'growth'),
+      readyTitle: s.cleaned ? 'Caches are clean' : 'Ready to clean',
+      readyLine: s.cleaned ? 'Nothing left that can go without a cost.' : fmt(readyGb) + ' in 4 caches · nothing lost',
+      canReview: !s.cleaned,
+      openReview: () => this.setState({ screen: 'review', sel: { npm: true, spotify: true, oikos: true, metro: true, vscode: false } }),
+      reviewBg: level === 'ok' ? t.btn : t.accent,
+      reviewColor: level === 'ok' ? t.text : t.onAccent,
+      groups: groups,
+      scanLine: 'Scanned ' + s.scanned,
+      scanNow: () => this.setState({ scanned: 'just now' }),
+      goMain: () => { clearInterval(this.timer); this.setState({ screen: 'main' }); },
+      items: items,
+      selLine: chosen.length ? fmt(selGb) + ' selected in ' + chosen.length + (chosen.length === 1 ? ' item' : ' items') : 'Nothing selected',
+      noneSelected: chosen.length === 0,
+      confirmOpacity: chosen.length ? '1' : '0.45',
+      confirmLabel: chosen.length === 0 ? 'Clean' : (quits.length ? 'Quit ' + quits.join(' and ') + ' and clean ' : 'Clean ') + fmt(selGb),
+      confirmClean: () => this.runClean(chosen.map((i) => ({ name: i.name, gb: i.gb, measured: i.measured })), 'caches'),
+      progress: progress,
+      stopClean: () => {
+        clearInterval(this.timer);
+        this.setState((st) => this.finish(st, st.queue.slice(0, Math.min(st.step + 1, st.queue.length)), 'caches'));
+      },
+      lastFreedLabel: fmt(s.lastFreed),
+      doneItems: s.doneItems.map((d) => ({ name: d.name, label: fmt(d.measured) }))
+    };
+  }
+}
+</script>
+</body>
+</html>
