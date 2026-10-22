@@ -19,6 +19,8 @@ struct ClaudeHooks {
 struct ClaudeAnswerView: View {
     let node: SpaceNode
     let hooks: ClaudeHooks
+    /// Off where another note from Ollie already says what the folder is.
+    var showGuess = true
 
     var body: some View {
         if let answer = hooks.answer(node.path) {
@@ -38,7 +40,7 @@ struct ClaudeAnswerView: View {
             Asking()
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                if let guess = hooks.guess(node.path) {
+                if showGuess, let guess = hooks.guess(node.path) {
                     Label(guess, systemImage: "text.bubble")
                         .fixedSize(horizontal: false, vertical: true)
                         .help("\(Helper.name)'s first guess")
@@ -60,6 +62,7 @@ struct ClaudeAnswerView: View {
             .font(.callout)
             // A first guess comes on its own once the selection settles.
             .task(id: node.path) {
+                guard showGuess else { return }
                 try? await Task.sleep(for: .milliseconds(600))
                 if !Task.isCancelled { hooks.requestGuess(node) }
             }
@@ -171,7 +174,7 @@ struct ClaudeSettings: View {
                 Toggle("Let \(Helper.name) write short notes on its own", isOn: $model.claudeAutoNotes)
                     .disabled(!model.claudeEnabled)
             } footer: {
-                Text("\(Helper.name) explains folders Headroom doesn't know, from the menu's Ask \(Helper.name) row or the Space Map. Detailed answers are asked for only when you choose a folder. Short notes, such as the summary at the top of the menu, why a folder grew, and a first guess at unknown folders, are written on their own.")
+                Text("\(Helper.name) explains folders Headroom doesn't know. You ask for a full answer about a folder; short notes, like the summary at the top of the menu, are written on their own.")
             }
 
             Section {
@@ -207,7 +210,11 @@ struct ClaudeSettings: View {
             } header: {
                 Text("What is sent")
             } footer: {
-                Text("\(Helper.name) runs on Claude, by Anthropic. Detailed answers come from \(ClaudeClient.model), which can search the web to identify an app, and cost about 3 US cents each. Notes come from \(QuickNotes.model) and cost a small fraction of a cent. Everything is saved on this Mac, so the same question is never sent twice.")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("A full answer costs about 3 US cents; a note costs a fraction of a cent. Answers are saved on this Mac, so nothing is asked twice.")
+                    Text("\(Helper.name) runs on Claude by Anthropic: \(ClaudeClient.model) for answers, which can search the web, and \(QuickNotes.model) for notes.")
+                        .font(.caption)
+                }
             }
 
             if !model.explanations.isEmpty {
@@ -266,10 +273,8 @@ struct HelperNote: View {
     let text: String
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "text.bubble")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: 8) {
+            Graphic(name: .ollie, size: 22)
             Text(text)
                 .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
@@ -292,14 +297,16 @@ struct HelperScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             ScreenTitle(title: "Ask \(Helper.name)")
             VStack(alignment: .leading, spacing: 10) {
-                if !model.claudeReady {
-                    Text("\(Helper.name) explains folders Headroom doesn't know, using Claude.")
-                        .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    Graphic(name: .ollie, size: 44)
+                    Text(!model.claudeReady ? "\(Helper.name) explains folders Headroom doesn't know, using Claude."
+                         : folders.isEmpty ? "Every large folder has a cleanup rule." : "Pick a large folder Headroom has no rule for, and \(Helper.name) will say what it is.")
+                        .font(.callout).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                if !model.claudeReady {
                     SettingsLink { Text("Set Up \(Helper.name)…") }.buttonStyle(.glassProminent)
                 } else {
-                    Text(folders.isEmpty ? "Every large folder has a cleanup rule." : "Large folders Headroom has no rule for.")
-                        .font(.callout).foregroundStyle(.secondary)
                     VStack(spacing: 2) {
                         ForEach(folders) { node in
                             FolderRow(node: node)

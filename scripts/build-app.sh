@@ -14,6 +14,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/HeadroomApp" "$APP/Contents/MacOS/Headroom"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp "$BIN/headroom" build/headroom
 
 # Ad-hoc signature: enough to run on this Mac.

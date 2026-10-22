@@ -37,6 +37,22 @@ enum DevPreview {
             // Opens the Space Map in a folder's parent with the folder selected, e.g. spacemap:~/Library/Caches/foo
             model.spaceMap.reveal(Paths.expand(String(name.dropFirst("spacemap:".count))))
             root = AnyView(SpaceMapView(model: model.spaceMap).environment(model).frame(width: 1000, height: 640))
+        case "graphics":
+            let names: [Graphic.Name] = [.ollie, .allClean, .access, .scan]
+            let row = { (scheme: ColorScheme) in
+                AnyView(HStack(spacing: 24) {
+                    ForEach(Array(names.enumerated()), id: \.offset) { _, name in
+                        VStack(spacing: 10) {
+                            Graphic(name: name, size: 64)
+                            Graphic(name: name, size: 22)
+                        }
+                    }
+                }
+                .padding(24)
+                .background(scheme == .dark ? Color(white: 0.17) : Color(white: 0.96))
+                .environment(\.colorScheme, scheme))
+            }
+            root = AnyView(VStack(spacing: 0) { row(.light); row(.dark) })
         case "offload":
             let item = OffloadItem(path: Paths.home + "/.android/avd/Pixel_7.avd", name: "Pixel_7", bytes: 3_100_000_000, quit: [])
             root = AnyView(OffloadSheet(item: item) { _ in }.frame(width: 460))

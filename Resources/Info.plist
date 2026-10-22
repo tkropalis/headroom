@@ -8,6 +8,8 @@
     <string>Headroom</string>
     <key>CFBundleExecutable</key>
     <string>Headroom</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>local.tommy.Headroom</string>
     <key>CFBundleInfoDictionaryVersion</key>

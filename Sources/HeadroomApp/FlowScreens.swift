@@ -61,9 +61,20 @@ struct ReviewScreen: View {
 
             Divider().padding(.horizontal, 16).padding(.top, 6)
             VStack(alignment: .trailing, spacing: 10) {
-                Text(selectionLine)
-                    .font(.callout).monospacedDigit().foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack {
+                    Text(selectionLine)
+                        .font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                    Spacer()
+                    if model.reviewGroup != .yourCall, easyItems.count > 1 {
+                        let all = easyItems.allSatisfy { model.selection.contains($0.id) }
+                        Button(all ? "Select None" : "Select All") {
+                            if all { model.selection.subtract(easyItems.map(\.id)) }
+                            else { model.selection.formUnion(easyItems.map(\.id)) }
+                        }
+                        .buttonStyle(.link)
+                        .font(.callout)
+                    }
+                }
                 HStack(spacing: 8) {
                     Button("Cancel") { model.screen = .main }
                         .buttonStyle(.glass)
@@ -84,6 +95,11 @@ struct ReviewScreen: View {
         case .identical: "Each set becomes copies that share one set of disk blocks. Every file stays where it is; editing one later only uses space for the change."
         default: "Nothing is removed until you confirm below."
         }
+    }
+
+    /// Items that can be ticked without quitting an app. Select All never quits anything.
+    private var easyItems: [Candidate] {
+        model.reviewItems.filter { let status = model.status(of: $0); return !status.isBlocked && status.note == nil }
     }
 
     private var selectionLine: String {
@@ -220,8 +236,16 @@ struct ResultScreen: View {
                     Text("Empty the Bin to free the space. Until then, Put Back restores each item to where it was.")
                         .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 } else {
-                    CountingText(prefix: "Freed ", value: Double(freed) * drained)
-                        .font(.system(size: 22, weight: .semibold))
+                    HStack(spacing: 8) {
+                        Image(systemName: failedAll ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 22))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(failedAll ? Color.orange : .green)
+                            .symbolEffect(.bounce, options: .nonRepeating, value: drained == 1 && !reduceMotion)
+                            .accessibilityHidden(true)
+                        CountingText(prefix: "Freed ", value: Double(freed) * drained)
+                            .font(.system(size: 22, weight: .semibold))
+                    }
                     Text(subtitle).font(.callout).monospacedDigit().foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -269,11 +293,13 @@ struct ResultScreen: View {
         }
     }
 
+    private var failedAll: Bool { !model.outcomes.isEmpty && model.outcomes.allSatisfy { $0.state != .done } }
+
     private var subtitle: String {
         let free = model.disk.map { ByteFormat.string($0.available) } ?? "–"
         let shared = model.outcomes.contains { $0.id.hasPrefix("identical:") }
-        return shared ? "Nothing was deleted · \(free) free now · measured from free space before and after"
-                      : "\(free) free now · measured from free space before and after"
+        return shared ? "Nothing was deleted · \(free) free now. Measured on the disk, not estimated."
+                      : "\(free) free now. Measured on the disk, not estimated."
     }
 }
 
@@ -338,7 +364,7 @@ struct GrowthScreen: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(Paths.display(alert.path)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 HStack(spacing: 10) {
-                    Stat(label: RelativeDate.dateTime(alert.since), value: alert.previous == 0 ? "None" : ByteFormat.string(alert.previous))
+                    Stat(label: RelativeDate.dateTime(alert.since), value: alert.previous == 0 ? "Not there" : ByteFormat.string(alert.previous))
                     Stat(label: "Now", value: ByteFormat.string(alert.current))
                 }
                 if alert.sharesSpace {
@@ -356,7 +382,8 @@ struct GrowthScreen: View {
                 } else if Explainer.privacyBlocker(alert.path) == nil {
                     ClaudeAnswerView(node: SpaceNode(path: alert.path, name: alert.name, allocated: alert.current,
                                                      unshared: alert.current, isDirectory: true),
-                                     hooks: model.claudeHooks)
+                                     hooks: model.claudeHooks,
+                                     showGuess: model.growthNotes[alert.path] == nil)
                 }
                 HStack(spacing: 8) {
                     Spacer()

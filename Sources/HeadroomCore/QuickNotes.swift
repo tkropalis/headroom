@@ -32,7 +32,10 @@ public enum QuickNotes {
 
         /// Sizes in whole GB, so small changes in free space don't make a new note.
         public var message: String {
-            var lines = ["Free: \(ByteFormat.wholeGB(free)) of \(ByteFormat.wholeGB(total)). Warning level: \(warnGB) GB."]
+            // Above the warning level the menu already shows the number, so the note needn't repeat it.
+            var lines = [free >= Int64(warnGB) * 1_000_000_000
+                ? "Free space is above the \(warnGB) GB warning level; nothing is urgent."
+                : "Free: \(ByteFormat.wholeGB(free)) of \(ByteFormat.wholeGB(total)). Warning level: \(warnGB) GB."]
             if let runway { lines.append("Trend: \(runway)") }
             lines.append("Space by category: " + categories.map { "\($0.name) \(ByteFormat.wholeGB($0.bytes))" }.joined(separator: ", "))
             if groups.isEmpty {
@@ -73,9 +76,10 @@ public enum QuickNotes {
 
     public static func summary(_ input: SummaryInput) async throws -> String {
         try await note(kind: "summary", prompt: input.message, system: """
-        You write the note at the top of Headroom, a Mac disk space app. From the numbers given, say in one or two \
-        short sentences what matters most right now and the one thing most worth doing, if anything. Never more than \
-        two sentences or 35 words.
+        You write the note at the top of Headroom, a Mac disk space app. From the numbers given, say what matters most \
+        right now and the one thing most worth doing, if anything. One or two short sentences, at most 25 words in \
+        all. Lead with the action when there is one, like "Clear <item> (<size>) under Rebuilds on use; nothing \
+        is lost, the next build is slower."
 
         Cleanup groups, from no cost to most: "Ready to clean" loses nothing; "Rebuilds on use" loses nothing but the \
         next build or launch is slower; "Your call" loses something the person may want; "Identical files" shares \
@@ -127,8 +131,8 @@ public enum QuickNotes {
             "max_tokens": 2000,
             "system": """
             For each numbered folder on a Mac, guess in at most 10 words what it is and which app or tool makes it, \
-            like "Postman's app data: sign-in, settings and history". Plain words, no markdown. If you can't tell, say \
-            "Not sure what this is".
+            like "Postman's app data: sign-in, settings and history". Plain words, no markdown. Don't say whether it \
+            is safe to delete. If you can't tell, say "Not sure what this is".
             """,
             "messages": [["role": "user", "content": prompt]],
             "output_config": ["effort": "low", "format": ["type": "json_schema", "schema": [

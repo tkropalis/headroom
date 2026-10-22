@@ -9,7 +9,7 @@ struct OnboardingScreen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("\(step) of 3").font(.callout).foregroundStyle(.secondary)
+            PageDots(current: step, count: 3)
             switch step {
             case 1: WelcomeStep()
             case 2: AccessStep()
@@ -26,7 +26,16 @@ private struct WelcomeStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Welcome to Headroom").font(.title2.weight(.semibold))
+            HStack(spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 52, height: 52)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Welcome to Headroom").font(.title2.weight(.semibold))
+                    Text("Free space, without the guesswork.").foregroundStyle(.secondary)
+                }
+            }
             VStack(alignment: .leading, spacing: 12) {
                 Point(symbol: "internaldrive", text: "Measures the folders on this Mac's disk and keeps one number in the menu bar.")
                 Point(symbol: "checkmark", text: "Cleans only what you confirm, and says what each item costs before you do.")
@@ -39,6 +48,24 @@ private struct WelcomeStep: View {
                     .keyboardShortcut(.defaultAction)
             }
         }
+    }
+}
+
+private struct PageDots: View {
+    let current: Int
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...count, id: \.self) { page in
+                Capsule()
+                    .fill(page == current ? Color.accentColor : Color.primary.opacity(0.18))
+                    .frame(width: page == current ? 16 : 6, height: 6)
+            }
+        }
+        .animation(.spring(duration: 0.3, bounce: 0), value: current)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step \(current) of \(count)")
     }
 }
 
@@ -64,7 +91,10 @@ private struct AccessStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Full Disk Access").font(.title2.weight(.semibold))
+            HStack(spacing: 12) {
+                Graphic(name: .access, size: 52)
+                Text("Full Disk Access").font(.title2.weight(.semibold))
+            }
             Text("With it, Headroom can measure every folder. Without it, Mail, Safari and some app data are skipped, so part of the disk goes uncounted.")
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
@@ -112,7 +142,10 @@ private struct FirstScanStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Ready for the first scan").font(.title2.weight(.semibold))
+            HStack(spacing: 12) {
+                Graphic(name: .scan, size: 52)
+                Text("Ready for the first scan").font(.title2.weight(.semibold))
+            }
             Text("The first scan takes about a minute. Free space shows at once; the rest fills in as folders are measured.")
                 .fixedSize(horizontal: false, vertical: true)
             Toggle("Open Headroom at login", isOn: $login)
