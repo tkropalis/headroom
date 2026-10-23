@@ -103,6 +103,7 @@ struct SpaceMapView: View {
         }
         .ignoresSafeArea()
         .background(Color(nsColor: .windowBackgroundColor))
+        .background(WindowButtonsInPanel(center: Self.inset + Self.buttonsInset))
         .navigationTitle(model.title)
         .quickLookPreview($model.quickLook)
         .sheet(isPresented: $model.reviewingPlan) { PlanReviewSheet(model: model) }
@@ -113,6 +114,71 @@ struct SpaceMapView: View {
     static let inspectorWidth: CGFloat = 308
     /// Space between the panels and the map.
     static let margin: CGFloat = 10
+    /// From the sidebar panel's top and left edges to the first window button's centre: the
+    /// buttons line up with the header row and sit evenly in the panel's corner.
+    static let buttonsInset: CGFloat = 21
+}
+
+/// Places the window's close, minimise and zoom buttons with the first one's centre `center`
+/// points from the window's top and left edges, keeping their spacing. AppKit puts them back
+/// when it lays out the title bar, so they are placed again after resizing and focus changes.
+private struct WindowButtonsInPanel: NSViewRepresentable {
+    let center: CGFloat
+
+    func makeNSView(context: Context) -> Placer { Placer() }
+
+    func updateNSView(_ view: Placer, context: Context) {
+        view.center = center
+        view.place()
+    }
+
+    final class Placer: NSView {
+        var center: CGFloat = 0
+        private var observers: [NSObjectProtocol] = []
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            observers.forEach(NotificationCenter.default.removeObserver)
+            observers = []
+            guard let window else { return }
+            let names: [Notification.Name] = [NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
+                                              NSWindow.didExitFullScreenNotification, NSWindow.didBecomeKeyNotification,
+                                              NSWindow.didResignKeyNotification, NSWindow.didChangeScreenNotification]
+            observers = names.map { name in
+                NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.place() }
+                }
+            }
+            DispatchQueue.main.async { [weak self] in self?.place() }
+        }
+
+        func place() {
+            // Full screen hides the buttons with the menu bar; AppKit keeps them where it wants.
+            guard let window, !window.styleMask.contains(.fullScreen),
+                  let close = window.standardWindowButton(.closeButton),
+                  let minimise = window.standardWindowButton(.miniaturizeButton),
+                  let zoom = window.standardWindowButton(.zoomButton),
+                  let titlebar = close.superview, let container = titlebar.superview, let frame = container.superview
+            else { return }
+            let size = close.frame.size
+            let spacing = minimise.frame.minX - close.frame.minX
+            // The title bar grows to hold the buttons, so all of each one can be clicked.
+            let height = max(container.frame.height, ceil(center + size.height / 2 + 4))
+            if container.frame.height != height {
+                container.frame = NSRect(x: container.frame.minX, y: frame.bounds.height - height,
+                                         width: container.frame.width, height: height)
+                titlebar.frame = container.bounds
+            }
+            let y = titlebar.isFlipped ? center - size.height / 2 : titlebar.bounds.height - center - size.height / 2
+            for (index, button) in [close, minimise, zoom].enumerated() {
+                button.setFrameOrigin(NSPoint(x: round(center - size.width / 2 + spacing * CGFloat(index)), y: round(y)))
+            }
+        }
+
+        deinit {
+            observers.forEach(NotificationCenter.default.removeObserver)
+        }
+    }
 }
 
 extension View {
