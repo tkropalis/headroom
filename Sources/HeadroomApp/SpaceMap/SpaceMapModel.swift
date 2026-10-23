@@ -64,6 +64,9 @@ final class SpaceMapModel {
     var snapshot: FolderSnapshot? = Store.snapshots().last?.existing()
     var disk: DiskStatus? = DiskStatus.current()
     var overview: SpaceOverview?
+    /// Rule categories with what they measure; "System and other" is left to the Kinds list.
+    /// Worked out when the snapshot or the disk changes, not on every redraw.
+    private(set) var categories: [SpaceCategory] = []
     var drives: [OffloadDestination] = []
 
     private(set) var location: SpaceLocation = .disk
@@ -135,8 +138,21 @@ final class SpaceMapModel {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var contentsTask: Task<Void, Never>?
     @ObservationIgnored private var history: [FolderSnapshot] = Store.snapshots()
-    /// Built-in and learned cleanup rules, read once per folder rather than once per row.
-    @ObservationIgnored private var catalog = Catalog.all
+    /// Built-in and learned cleanup rules, indexed once rather than read for every row.
+    @ObservationIgnored private var catalog = CatalogIndex.current
+    /// Costs already worked out, by path and kind. Hover and selection redraw the map many times
+    /// a second; each redraw asks for every tile's cost several times.
+    @ObservationIgnored private var costs: [CostKey: SpaceCost] = [:]
+    /// Goes up when what decides costs changes, so the map and list draw them again.
+    private(set) var costVersion = 0
+
+    /// Each snapshot folder's cost, for the breakdowns, worked out once rather than for every row.
+    @ObservationIgnored private var entryCosts: (version: Int, costs: [String: SpaceCost])?
+
+    private struct CostKey: Hashable {
+        var path: String
+        var kind: SpaceKind?
+    }
 
     static let unmeasuredPath = "headroom:unmeasured"
     static let volumesPath = "headroom:volumes"
@@ -150,12 +166,6 @@ final class SpaceMapModel {
     }
 
     // MARK: Derived
-
-    /// Rule categories with what they measure; "System and other" is left to the Kinds list.
-    var categories: [SpaceCategory] {
-        guard let snapshot, let disk else { return [] }
-        return SpaceTree.categories(snapshot: snapshot, disk: disk).filter { $0.name != SpaceTree.otherCategory }
-    }
 
     var currentPath: String? {
         if case .folder(let path) = location { return path }
@@ -257,6 +267,22 @@ final class SpaceMapModel {
 
     /// What removing this row costs, from the scan, the rules, Ollie's answer and its kind.
     func cost(of node: SpaceNode) -> SpaceCost {
+        _ = costVersion
+        let key = CostKey(path: node.path, kind: node.kind)
+        if let known = costs[key] { return known }
+        let cost = workOutCost(node)
+        costs[key] = cost
+        return cost
+    }
+
+    /// Forgets the costs worked out so far: a scan finished, Ollie answered, or a rule was learned.
+    func costsChanged() {
+        costs = [:]
+        catalog = CatalogIndex.current
+        costVersion += 1
+    }
+
+    private func workOutCost(_ node: SpaceNode) -> SpaceCost {
         switch node.path {
         // Not measured mixes macOS, purgeable space and folders Headroom couldn't read.
         case Self.unmeasuredPath: return .unknown
@@ -266,7 +292,7 @@ final class SpaceMapModel {
         if node.path.hasPrefix("headroom:") { return .unknown }
         let candidate = candidateFor(node.path).flatMap { $0.paths.contains(node.path) ? $0 : nil }
         return SpaceCost.of(node.path, kind: node.kind, candidate: candidate,
-                            explanation: claude.answer(node.path), catalog: catalog)
+                            explanation: claude.answer(node.path), index: catalog)
     }
 
     /// The part of a row that can go without losing anything.
@@ -377,7 +403,7 @@ final class SpaceMapModel {
         loadTask?.cancel()
         selection = []
         search = ""
-        catalog = Catalog.all
+        catalog = CatalogIndex.current
         pending = []
         measuring = false
         measuredAt = snapshot?.date
@@ -447,9 +473,10 @@ final class SpaceMapModel {
         }
         if SpaceTree.isCovered(path) {
             // The snapshot measured everything here; only entries made since are measured now.
-            let (rows, missing) = SpaceTree.snapshotChildren(of: path, snapshot: snapshot)
+            let (rows, missing) = SpaceTree.snapshotChildren(of: path, snapshot: snapshot, dates: false)
             nodes = rows
             pending = Set(missing)
+            fillDates(path)
             guard !missing.isEmpty else { return }
             measuring = true
             loadTask = Task { [weak self, data] in
@@ -465,6 +492,25 @@ final class SpaceMapModel {
         nodes = data.listing(path, snapshot: snapshot)
         pending = Set(nodes.map(\.path))
         measureAll(path)
+    }
+
+    /// Reads the rows' last-used dates from Spotlight away from the main thread; they fade in
+    /// a moment after the rows.
+    private func fillDates(_ path: String) {
+        let paths = nodes.map(\.path)
+        Task { [weak self] in
+            let dates = await Task.detached(priority: .userInitiated) {
+                paths.reduce(into: [String: Date]()) { $0[$1] = SpaceTree.lastOpened($1) }
+            }.value
+            guard let self, !Task.isCancelled, self.currentPath == path else { return }
+            withAnimation(Motion.arrive) {
+                self.nodes = self.nodes.map { node in
+                    var node = node
+                    if node.lastOpened == nil { node.lastOpened = dates[node.path] }
+                    return node
+                }
+            }
+        }
     }
 
     /// Measures every entry of the open folder from the disk.
@@ -517,26 +563,33 @@ final class SpaceMapModel {
         let (placePrefix, kindPrefix) = (Self.placePrefix, Self.kindPrefix)
         // The macOS volumes are measured but in no folder; they count with macOS and with Other.
         let volumes = overview?.systemVolumes ?? 0
+        let version = costVersion
+        let known = entryCosts?.version == version ? entryCosts?.costs : nil
         Task { [weak self] in
-            let found = await Task.detached(priority: .utility) { () -> [String: CostBreakdown] in
+            let (found, costs) = await Task.detached(priority: .utility) { () -> ([String: CostBreakdown], [String: SpaceCost]) in
+                let costs = known ?? SpaceTree.entryCosts(snapshot, index: catalog)
+                let cost: (String) -> SpaceCost = { costs[$0] ?? .unknown }
                 var out: [String: CostBreakdown] = [:]
                 for path in wanted {
                     if path.hasPrefix(placePrefix), let place = SpacePlace(rawValue: String(path.dropFirst(placePrefix.count))) {
-                        var breakdown = SpaceTree.breakdown(of: place, snapshot: snapshot, catalog: catalog)
+                        var breakdown = SpaceTree.breakdown(of: place, snapshot: snapshot, cost: cost)
                         if place == .macOS && volumes > 0 { breakdown.bytes[.system, default: 0] += volumes }
                         out[path] = breakdown
                     } else if path.hasPrefix(kindPrefix) {
                         let name = String(path.dropFirst(kindPrefix.count))
-                        var breakdown = SpaceTree.breakdown(ofCategory: name, snapshot: snapshot, catalog: catalog)
+                        var breakdown = SpaceTree.breakdown(ofCategory: name, snapshot: snapshot, cost: cost)
                         if name == SpaceTree.otherCategory && volumes > 0 { breakdown.bytes[.system, default: 0] += volumes }
                         out[path] = breakdown
-                    } else if let breakdown = SpaceTree.breakdown(under: path, snapshot: snapshot, catalog: catalog) {
+                    } else if let breakdown = SpaceTree.breakdown(under: path, snapshot: snapshot, cost: cost) {
                         out[path] = breakdown
                     }
                 }
-                return out
+                return (out, costs)
             }.value
-            self?.breakdowns.merge(found) { _, new in new }
+            guard let self else { return }
+            // Kept unless costs changed meanwhile, for example because the snapshot was read again.
+            if self.costVersion == version { self.entryCosts = (version, costs) }
+            self.breakdowns.merge(found) { _, new in new }
         }
     }
 
@@ -556,6 +609,8 @@ final class SpaceMapModel {
         snapshot = history.last?.existing()
         breakdowns = [:]
         contents = [:]
+        costsChanged()
+        AppOwner.forget()
         refreshDisk()
         reload()
     }
@@ -564,6 +619,9 @@ final class SpaceMapModel {
         disk = DiskStatus.current()
         if let snapshot, let disk {
             overview = SpaceOverview(snapshot: snapshot, disk: disk, systemVolumes: DiskStatus.otherVolumesBytes())
+            categories = SpaceTree.categories(snapshot: snapshot, disk: disk).filter { $0.name != SpaceTree.otherCategory }
+        } else {
+            categories = []
         }
         drives = Offloader.destinations().filter { if case .drive = $0.kind { true } else { false } }
     }

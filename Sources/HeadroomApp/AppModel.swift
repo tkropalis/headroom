@@ -40,7 +40,7 @@ final class StopFlag: @unchecked Sendable {
 final class AppModel {
     // Disk and scan
     var disk: DiskStatus? = DiskStatus.current()
-    var scan: ScanResult? = Store.lastScan()
+    var scan: ScanResult? = Store.lastScan() { didSet { candidatesChanged() } }
     var scanning = false
     var processes = ProcessSnapshot(commandLines: [], runningBundleIDs: [])
     var expandedGroup: CandidateGroup?
@@ -55,7 +55,7 @@ final class AppModel {
     private let stopFlag = StopFlag()
 
     // Identical files: a slower scan of its own, at most once a day.
-    var identicalGroups: [IdenticalGroup] = Store.identicalGroups()?.groups ?? []
+    var identicalGroups: [IdenticalGroup] = Store.identicalGroups()?.groups ?? [] { didSet { candidatesChanged() } }
     var identicalDate: Date? = Store.identicalGroups()?.date
     var scanningIdentical = false
 
@@ -149,6 +149,39 @@ final class AppModel {
     }
 
     var allCandidates: [Candidate] { (scan?.candidates ?? []) + Scanner.identicalCandidates(identicalGroups) }
+
+    /// Scan items by the paths they clean, and by those or their project. The Space Map asks for
+    /// every tile; built once per scan rather than searched each time.
+    @ObservationIgnored private var candidateIndex: (cleans: [String: Candidate], cleansOrProject: [String: Candidate])?
+
+    /// The first scan item that cleans `path`, or, with `orProject`, whose project it is.
+    func candidate(for path: String, orProject: Bool) -> Candidate? {
+        // Read so that views asking this redraw when a scan finishes.
+        _ = scan
+        _ = identicalGroups
+        let index = candidateIndex ?? buildCandidateIndex()
+        return orProject ? index.cleansOrProject[path] : index.cleans[path]
+    }
+
+    private func buildCandidateIndex() -> (cleans: [String: Candidate], cleansOrProject: [String: Candidate]) {
+        var cleans: [String: Candidate] = [:]
+        var cleansOrProject: [String: Candidate] = [:]
+        // Earlier items win, as a search from the start would find them.
+        for item in allCandidates {
+            for path in item.paths {
+                if cleans[path] == nil { cleans[path] = item }
+                if cleansOrProject[path] == nil { cleansOrProject[path] = item }
+            }
+            if let project = item.projectPath, cleansOrProject[project] == nil { cleansOrProject[project] = item }
+        }
+        candidateIndex = (cleans, cleansOrProject)
+        return (cleans, cleansOrProject)
+    }
+
+    private func candidatesChanged() {
+        candidateIndex = nil
+        spaceMap.costsChanged()
+    }
 
     /// Shown under the headroom line when free space is falling and would run out within 30 days.
     var runway: Runway? {
@@ -400,7 +433,7 @@ final class AppModel {
     // MARK: - Claude
 
     var claudeKeyStored = ClaudeKey.isStored
-    var explanations: [Explanation] = Store.explanations()
+    var explanations: [Explanation] = Store.explanations() { didSet { spaceMap.costsChanged() } }
     var explaining: Set<String> = []
     var explainErrors: [String: String] = [:]
 
@@ -547,11 +580,11 @@ final class AppModel {
     private func configureSpaceMap() {
         let map = spaceMap
         map.candidateFor = { [weak self] path in
-            self?.allCandidates.first { $0.paths.contains(path) || $0.projectPath == path }
+            self?.candidate(for: path, orProject: true)
         }
         map.blockerFor = { [weak self] path in
             guard let self else { return nil }
-            if let item = self.allCandidates.first(where: { $0.paths.contains(path) }), let blocker = self.status(of: item).blocker {
+            if let item = self.candidate(for: path, orProject: false), let blocker = self.status(of: item).blocker {
                 return blocker
             }
             if let process = self.processes.processUsing(folder: path) {

@@ -45,12 +45,19 @@ public enum SpaceCost: String, Codable, Sendable, CaseIterable {
     /// the path is, and finally what kind of thing it is.
     public static func of(_ path: String, kind: SpaceKind?, candidate: Candidate? = nil,
                           explanation: Explanation? = nil, catalog: [CatalogEntry] = Catalog.all) -> SpaceCost {
+        of(path, kind: kind, candidate: candidate, explanation: explanation, index: CatalogIndex(catalog))
+    }
+
+    /// The same, with the catalogue already indexed. `kind` is only worked out when nothing
+    /// before it decides, since finding a project means listing the folder.
+    public static func of(_ path: String, kind: @autoclosure () -> SpaceKind?, candidate: Candidate? = nil,
+                          explanation: Explanation? = nil, index: CatalogIndex) -> SpaceCost {
         if isPersonal(path) { return .yourFiles }
         if let candidate, let cost = cost(of: candidate.group) { return cost }
-        if let level = catalogLevel(path, catalog: catalog) { return cost(of: level) }
+        if let level = index.level(of: path) { return cost(of: level) }
         if let explanation, explanation.path == path { return cost(of: explanation.verdict) }
         if let cost = byLocation(path) { return cost }
-        if let kind { return cost(of: kind) }
+        if let kind = kind() { return cost(of: kind) }
         return .unknown
     }
 
@@ -93,16 +100,7 @@ public enum SpaceCost: String, Codable, Sendable, CaseIterable {
 
     /// The level of the catalogue entry that cleans this path or a folder holding it.
     static func catalogLevel(_ path: String, catalog: [CatalogEntry]) -> CleanupLevel? {
-        func within(_ folder: String) -> Bool { path == folder || path.hasPrefix(folder + "/") }
-        for entry in catalog {
-            switch entry.target {
-            case .paths(let list): if list.map(Paths.expand).contains(where: within) { return entry.level }
-            case .adminContents(let dir): if within(dir) { return entry.level }
-            case .oldChildren(let dir, _), .oldFiles(let dir, _, _): if within(Paths.expand(dir)) { return entry.level }
-            case .docker, .probe: break
-            }
-        }
-        return nil
+        CatalogIndex(catalog).level(of: path)
     }
 
     static let systemFolders = ["/System", "/usr", "/bin", "/sbin", "/private/var/vm", "/Library/Apple",
@@ -120,5 +118,53 @@ public enum SpaceCost: String, Codable, Sendable, CaseIterable {
             if (path as NSString).deletingLastPathComponent == parent { return .yourCall }
         }
         return nil
+    }
+}
+
+/// The catalogue's folders, expanded once, for answering many paths quickly.
+public struct CatalogIndex: Sendable {
+    /// Each entry's folders with its level, in catalogue order, so the first entry still wins.
+    private let folders: [(path: String, level: CleanupLevel)]
+    /// Folders an entry other than "your call" targets exactly: these are caches.
+    let caches: Set<String>
+
+    public init(_ catalog: [CatalogEntry]) {
+        var folders: [(path: String, level: CleanupLevel)] = []
+        var caches: Set<String> = []
+        for entry in catalog {
+            let targets: [String] = switch entry.target {
+            case .paths(let list): list.map(Paths.expand)
+            case .adminContents(let dir): [dir]
+            case .oldChildren(let dir, _), .oldFiles(let dir, _, _): [Paths.expand(dir)]
+            case .docker, .probe: []
+            }
+            folders += targets.map { ($0, entry.level) }
+            if entry.level != .yourCall { caches.formUnion(targets) }
+        }
+        self.folders = folders
+        self.caches = caches
+    }
+
+    /// The level of the entry that cleans this path or a folder holding it.
+    public func level(of path: String) -> CleanupLevel? {
+        folders.first { path == $0.path || path.hasPrefix($0.path + "/") }?.level
+    }
+
+    /// Built-in and learned rules, rebuilt only when the learned ones change.
+    public static var current: CatalogIndex { Cache.shared.index() }
+
+    private final class Cache: @unchecked Sendable {
+        static let shared = Cache()
+        private let lock = NSLock()
+        private var built: (version: Int, index: CatalogIndex)?
+
+        func index() -> CatalogIndex {
+            lock.lock(); defer { lock.unlock() }
+            let version = ExplanationCache.shared.currentVersion
+            if let built, built.version == version { return built.index }
+            let index = CatalogIndex(Catalog.all)
+            built = (version, index)
+            return index
+        }
     }
 }

@@ -222,10 +222,10 @@ import Testing
         #expect(rows[0].allocated == 6 * gb)
         #expect(missing == [root + "/new"])
 
-        let breakdown = SpaceTree.breakdown(under: root + "/Library", snapshot: snapshot, catalog: [])
+        let breakdown = SpaceTree.breakdown(under: root + "/Library", snapshot: snapshot, index: CatalogIndex([]))
         #expect(breakdown?.count == 3)
         #expect(breakdown?.total == 6 * gb)
-        #expect(SpaceTree.breakdown(under: root + "/web", snapshot: snapshot, catalog: []) == nil)
+        #expect(SpaceTree.breakdown(under: root + "/web", snapshot: snapshot, index: CatalogIndex([])) == nil)
     }
 
     @Test func mixedNeedsVisibleShares() {

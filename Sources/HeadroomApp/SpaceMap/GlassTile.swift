@@ -186,13 +186,12 @@ struct TileGlass: View {
 // MARK: - On the glass
 
 /// Name, size and icon, sized to the tile; badges for in use and growth; the selection rim.
+/// The highlight that follows the pointer is drawn by `HoverRim`.
 struct TileLabels: View {
     let tile: MapTile
     let model: SpaceMapModel
     let selected: Bool
     var lifted = false
-    /// Where the pointer is on the tile, for a highlight on the rim that follows it.
-    var hoverPoint: CGPoint?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
 
@@ -216,18 +215,7 @@ struct TileLabels: View {
                                                        startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
             }
         }
-        .overlay {
-            if let hoverPoint, !tile.isFlat {
-                tile.shape.strokeBorder(
-                    RadialGradient(colors: [.white.opacity(0.75), .white.opacity(0)],
-                                   center: UnitPoint(x: hoverPoint.x / max(size.width, 1), y: hoverPoint.y / max(size.height, 1)),
-                                   startRadius: 0, endRadius: max(size.width, size.height) * 0.55),
-                    lineWidth: 1.5)
-                    .transition(.opacity)
-            }
-        }
         .animation(Motion.respond, value: selected)
-        .animation(Motion.respond, value: hoverPoint == nil)
         .animation(Motion.arrive, value: model.growth[tile.id])
         .animation(Motion.arrive, value: inUseReason)
         .onAppear {

@@ -117,8 +117,10 @@ extension SpaceTree {
     }
 
     /// The entries of a covered folder with sizes summed from the snapshot, largest first.
-    /// `missing` are entries the snapshot has no folder for, such as ones made since.
-    public static func snapshotChildren(of folder: String, snapshot: FolderSnapshot) -> (rows: [SpaceNode], missing: [String]) {
+    /// `missing` are entries the snapshot has no folder for, such as ones made since. Without
+    /// `dates`, last-used dates are left out: Spotlight is slow, so they can be read later.
+    public static func snapshotChildren(of folder: String, snapshot: FolderSnapshot,
+                                        dates: Bool = true) -> (rows: [SpaceNode], missing: [String]) {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: folder)) ?? []
         var sums: [String: Int64] = [:]
         let prefix = folder + "/"
@@ -134,7 +136,7 @@ extension SpaceTree {
             if sums[path] == nil { missing.append(path) }
             let size = sums[path] ?? 0
             return SpaceNode(path: path, name: name, allocated: size, unshared: size, isDirectory: isDirectory,
-                             lastOpened: lastOpened(path), kind: kind(of: path, isDirectory: isDirectory))
+                             lastOpened: dates ? lastOpened(path) : nil, kind: kind(of: path, isDirectory: isDirectory))
         }
         return (rows.sorted { $0.allocated > $1.allocated }, missing)
     }
@@ -153,37 +155,60 @@ extension SpaceTree {
 
     /// What removing the snapshot folders under `path` costs, by bytes. Nil when the
     /// snapshot holds fewer than two folders there.
-    public static func breakdown(under path: String, snapshot: FolderSnapshot, catalog: [CatalogEntry]) -> CostBreakdown? {
+    public static func breakdown(under path: String, snapshot: FolderSnapshot, index: CatalogIndex) -> CostBreakdown? {
+        breakdown(under: path, snapshot: snapshot) { entryCost($0, index: index) }
+    }
+
+    /// The same, with each folder's cost from `cost`, for example from `entryCosts`.
+    public static func breakdown(under path: String, snapshot: FolderSnapshot, cost: (String) -> SpaceCost) -> CostBreakdown? {
         let prefix = path + "/"
         var bytes: [SpaceCost: Int64] = [:]
         var count = 0
         for (entry, size) in snapshot.sizes where entry.hasPrefix(prefix) {
             count += 1
-            bytes[SpaceCost.of(entry, kind: kind(of: entry, isDirectory: true), catalog: catalog), default: 0] += size
+            bytes[cost(entry), default: 0] += size
         }
         return count >= 2 ? CostBreakdown(bytes: bytes, count: count) : nil
     }
 
+    /// The cost of one snapshot folder.
+    public static func entryCost(_ entry: String, index: CatalogIndex) -> SpaceCost {
+        SpaceCost.of(entry, kind: kind(of: entry, isDirectory: true), index: index)
+    }
+
+    /// Every snapshot folder's cost, worked out once so each breakdown doesn't repeat it.
+    public static func entryCosts(_ snapshot: FolderSnapshot, index: CatalogIndex) -> [String: SpaceCost] {
+        snapshot.sizes.keys.reduce(into: [:]) { $0[$1] = entryCost($1, index: index) }
+    }
+
     /// The snapshot folders in a place, summed by cost.
-    public static func breakdown(of place: SpacePlace, snapshot: FolderSnapshot, catalog: [CatalogEntry]) -> CostBreakdown {
+    public static func breakdown(of place: SpacePlace, snapshot: FolderSnapshot, index: CatalogIndex) -> CostBreakdown {
+        breakdown(of: place, snapshot: snapshot) { entryCost($0, index: index) }
+    }
+
+    public static func breakdown(of place: SpacePlace, snapshot: FolderSnapshot, cost: (String) -> SpaceCost) -> CostBreakdown {
         var bytes: [SpaceCost: Int64] = [:]
         var count = 0
         for (entry, size) in snapshot.sizes where SpacePlace.of(entry) == place {
             count += 1
-            bytes[SpaceCost.of(entry, kind: kind(of: entry, isDirectory: true), catalog: catalog), default: 0] += size
+            bytes[cost(entry), default: 0] += size
         }
         return CostBreakdown(bytes: bytes, count: count)
     }
 
     /// The snapshot folders of a category, summed by cost. `otherCategory` means the folders no rule claims.
-    public static func breakdown(ofCategory name: String, snapshot: FolderSnapshot, catalog: [CatalogEntry]) -> CostBreakdown {
+    public static func breakdown(ofCategory name: String, snapshot: FolderSnapshot, index: CatalogIndex) -> CostBreakdown {
+        breakdown(ofCategory: name, snapshot: snapshot) { entryCost($0, index: index) }
+    }
+
+    public static func breakdown(ofCategory name: String, snapshot: FolderSnapshot, cost: (String) -> SpaceCost) -> CostBreakdown {
         var bytes: [SpaceCost: Int64] = [:]
         var count = 0
         for (entry, size) in snapshot.sizes {
             let own = category(of: entry)
             guard name == otherCategory ? own == nil : own == name else { continue }
             count += 1
-            bytes[SpaceCost.of(entry, kind: kind(of: entry, isDirectory: true), catalog: catalog), default: 0] += size
+            bytes[cost(entry), default: 0] += size
         }
         return CostBreakdown(bytes: bytes, count: count)
     }

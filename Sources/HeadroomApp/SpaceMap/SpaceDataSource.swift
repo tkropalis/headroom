@@ -143,7 +143,21 @@ enum AppOwner {
         "CoreSimulator": "com.apple.iphonesimulator", "DerivedData": "com.apple.dt.Xcode",
     ]
 
-    static func app(for path: String, hint: String?) -> URL? {
+    /// Answers so far, by hint and path: Launch Services lookups are slow, and the map asks for
+    /// every row's owner each time it lists a folder. Forgotten when the window opens.
+    @MainActor private static var found: [String: URL?] = [:]
+
+    @MainActor static func app(for path: String, hint: String?) -> URL? {
+        let key = (hint ?? "") + "|" + path
+        if let known = found[key] { return known }
+        let url = lookUp(path, hint: hint)
+        found[key] = url
+        return url
+    }
+
+    @MainActor static func forget() { found = [:] }
+
+    private static func lookUp(_ path: String, hint: String?) -> URL? {
         let workspace = NSWorkspace.shared
         if let hint, !hint.isEmpty, let url = workspace.urlForApplication(withBundleIdentifier: hint) { return url }
         let name = (path as NSString).lastPathComponent

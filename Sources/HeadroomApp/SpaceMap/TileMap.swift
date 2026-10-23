@@ -11,7 +11,7 @@ struct TileMap: View {
     @State private var marquee: CGRect?
     @State private var marqueeBase: Set<String> = []
     /// The tile under the pointer and where on it, so its rim can catch the light there.
-    @State private var hover: (id: String, point: CGPoint)?
+    @State private var hover = MapHover()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Opening and going back: a spring with no overshoot, as nothing was thrown.
@@ -69,12 +69,12 @@ struct TileMap: View {
                 }
             }
             ForEach(tiles) { tile in
-                TileLabels(tile: tile, model: model, selected: isSelected(tile), lifted: isPlanned(tile),
-                           hoverPoint: hover?.id == tile.id ? hover?.point : nil)
+                TileLabels(tile: tile, model: model, selected: isSelected(tile), lifted: isPlanned(tile))
                     .allowsHitTesting(false)
                     .modifier(Lift(lifted: isPlanned(tile) && hasGlass(tile)))
                     .offset(x: tile.rect.minX, y: tile.rect.minY)
             }
+            HoverRim(hover: hover, tiles: tiles, lifted: Set(tiles.filter { isPlanned($0) && hasGlass($0) }.map(\.id)))
             // Where each tile's chip starts when it is added to the plan. Placed by position, not
             // offset, so the shared geometry sees where the tile really is.
             ForEach(tiles.filter { $0.node != nil && !$0.isGroup && !isPlanned($0) }) { tile in
@@ -151,8 +151,11 @@ struct TileMap: View {
 
     func setHover(_ tile: MapTile, _ phase: HoverPhase) {
         switch phase {
-        case .active(let point): hover = (tile.id, point)
-        case .ended: if hover?.id == tile.id { hover = nil }
+        case .active(let point):
+            hover.id = tile.id
+            hover.point = point
+        case .ended:
+            if hover.id == tile.id { hover.id = nil }
         }
     }
 
@@ -337,6 +340,44 @@ struct SpaceItemMenu: View {
                 Button("Never Scan This") { model.setExcluded(node.path, true) }
             }
         }
+    }
+}
+
+/// The tile under the pointer and where on it. Kept apart from the map's own state, so moving
+/// the pointer redraws only the highlight rather than every tile.
+@MainActor @Observable
+final class MapHover {
+    var id: String?
+    var point: CGPoint = .zero
+}
+
+/// A highlight on the rim of the tile under the pointer that follows it. Flat tiles have no rim.
+private struct HoverRim: View {
+    let hover: MapHover
+    let tiles: [MapTile]
+    /// Tiles lifted off the map, whose rim moves with them.
+    let lifted: Set<String>
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if let id = hover.id, let tile = tiles.first(where: { $0.id == id }), !tile.isFlat {
+                let size = tile.rect.size
+                let raised = lifted.contains(id) && !reduceMotion
+                tile.shape.strokeBorder(
+                    RadialGradient(colors: [.white.opacity(0.75), .white.opacity(0)],
+                                   center: UnitPoint(x: hover.point.x / max(size.width, 1), y: hover.point.y / max(size.height, 1)),
+                                   startRadius: 0, endRadius: max(size.width, size.height) * 0.55),
+                    lineWidth: 1.5)
+                    .frame(width: size.width, height: size.height)
+                    .offset(x: tile.rect.minX + (raised ? -3 : 0), y: tile.rect.minY + (raised ? -4 : 0))
+                    // Moving to another tile fades one rim out and the next in.
+                    .id(id)
+                    .transition(.opacity)
+            }
+        }
+        .animation(Motion.respond, value: hover.id)
+        .allowsHitTesting(false)
     }
 }
 

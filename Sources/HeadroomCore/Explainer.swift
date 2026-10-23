@@ -120,12 +120,12 @@ public struct FolderFacts: Sendable {
 
 public enum Explainer {
     /// Personal folders whose names Headroom never sends anywhere.
-    static var privateFolders: [String] {
+    static let privateFolders: [String] = {
         let h = Paths.home
         return ["Documents", "Desktop", "Downloads", "Pictures", "Movies", "Music", "Library/Mobile Documents",
                 "Library/CloudStorage", "Library/Mail", "Library/Messages", "Library/Containers/com.apple.mail"]
             .map { h + "/" + $0 }
-    }
+    }()
 
     /// Why this path can't be sent to Claude, or nil when it can.
     public static func privacyBlocker(_ path: String) -> String? {
@@ -271,6 +271,8 @@ final class ExplanationCache: @unchecked Sendable {
     static let shared = ExplanationCache()
     private let lock = NSLock()
     private var items: [Explanation]?
+    /// Goes up whenever the answers change, so rules learned from them can be rebuilt.
+    private var version = 0
 
     func get(_ load: () -> [Explanation]) -> [Explanation] {
         lock.lock(); defer { lock.unlock() }
@@ -280,7 +282,9 @@ final class ExplanationCache: @unchecked Sendable {
         return loaded
     }
 
-    func set(_ value: [Explanation]) { lock.lock(); items = value; lock.unlock() }
+    func set(_ value: [Explanation]) { lock.lock(); items = value; version += 1; lock.unlock() }
+
+    var currentVersion: Int { lock.lock(); defer { lock.unlock() }; return version }
 }
 
 extension Store {

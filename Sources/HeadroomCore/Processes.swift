@@ -3,12 +3,16 @@ import Foundation
 
 /// What is running right now: GUI apps and every process's command line.
 public struct ProcessSnapshot: Sendable {
-    public var commandLines: [String]
-    public var runningBundleIDs: Set<String>
+    public let commandLines: [String]
+    public let runningBundleIDs: Set<String>
+    /// The command lines a folder can be in use by, as bytes: not app bundles' own processes, nor ps itself.
+    private let folderUsers: [(line: String, bytes: [UInt8])]
 
     public init(commandLines: [String], runningBundleIDs: Set<String>) {
         self.commandLines = commandLines
         self.runningBundleIDs = runningBundleIDs
+        folderUsers = commandLines.filter { !$0.contains("/Contents/MacOS/") && !$0.hasPrefix("/bin/ps") }
+            .map { ($0, Array($0.utf8)) }
     }
 
     public static func capture() -> ProcessSnapshot {
@@ -39,10 +43,13 @@ public struct ProcessSnapshot: Sendable {
 
     /// A dev server or build tool running inside a project folder.
     public func processUsing(folder: String) -> String? {
-        let prefix = folder.hasSuffix("/") ? folder : folder + "/"
-        return commandLines.first { line in
-            line.contains(prefix) && !line.contains("/Contents/MacOS/") && !line.hasPrefix("/bin/ps")
-        }
+        let prefix = Array((folder.hasSuffix("/") ? folder : folder + "/").utf8)
+        // A byte search: the Space Map asks this for every row it lists, against every process.
+        return folderUsers.first { user in
+            user.bytes.withUnsafeBytes { line in
+                prefix.withUnsafeBytes { memmem(line.baseAddress, line.count, $0.baseAddress, $0.count) != nil }
+            }
+        }?.line
     }
 }
 

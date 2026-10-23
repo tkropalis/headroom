@@ -1,18 +1,18 @@
 import Foundation
 
 public enum Paths {
-    public static var home: String { NSHomeDirectory() }
+    // Read once: they don't change while Headroom runs, and the Space Map asks for them
+    // thousands of times a second.
+    public static let home: String = NSHomeDirectory()
 
     /// The per-user temporary folder, e.g. /var/folders/jb/…/T/
-    public static var userTemp: String { confString(_CS_DARWIN_USER_TEMP_DIR) }
+    public static let userTemp: String = confString(_CS_DARWIN_USER_TEMP_DIR)
 
     /// The per-user cache folder, e.g. /var/folders/jb/…/C/
-    public static var userCache: String { confString(_CS_DARWIN_USER_CACHE_DIR) }
+    public static let userCache: String = confString(_CS_DARWIN_USER_CACHE_DIR)
 
     /// The parent of T and C, holding X where code-signing clones live.
-    public static var userFolders: String {
-        (userTemp as NSString).deletingLastPathComponent
-    }
+    public static let userFolders: String = (userTemp as NSString).deletingLastPathComponent
 
     public static var appSupport: String {
         home + "/Library/Application Support/Headroom"
@@ -56,7 +56,7 @@ public enum Paths {
 /// Last line of defence before anything is deleted.
 public enum PathSafety {
     /// Folders that must never be deleted themselves, whatever a catalogue entry says.
-    static var protected: Set<String> {
+    static let protected: Set<String> = {
         let h = Paths.home
         return [
             "/", "/System", "/Users", "/Applications", "/Library", "/private", "/var", "/var/folders",
@@ -67,7 +67,7 @@ public enum PathSafety {
             (Paths.userTemp as NSString).standardizingPath, (Paths.userCache as NSString).standardizingPath,
             (Paths.userFolders as NSString).standardizingPath,
         ]
-    }
+    }()
 
     public static func isDeletable(_ path: String) -> Bool {
         guard path.hasPrefix("/") else { return false }

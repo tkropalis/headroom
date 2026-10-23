@@ -65,12 +65,17 @@ public enum SpaceTree {
     /// The catch-all category: folders no rule claims, plus space the snapshot didn't measure.
     public static let otherCategory = "System and other"
 
+    /// A plain search: paths are compared as written, and this runs for every snapshot folder.
+    private static func has(_ path: String, _ part: String) -> Bool {
+        path.range(of: part, options: .literal) != nil
+    }
+
     private static let rules: [(name: String, matches: (String) -> Bool)] = [
         ("Developer", { p in ["/Library/Developer", "/Library/Android", "/.gradle", "/.android", "Xcode.app",
-                               "Android Studio.app", "/.cocoapods", "/.swiftpm", "/.expo", "/.maestro"].contains { p.contains($0) } }),
-        ("Docker", { p in p.contains("com.docker.docker") || p.hasSuffix("/.docker") || p.hasSuffix("Docker.app") }),
+                               "Android Studio.app", "/.cocoapods", "/.swiftpm", "/.expo", "/.maestro"].contains { has(p, $0) } }),
+        ("Docker", { p in has(p, "com.docker.docker") || p.hasSuffix("/.docker") || p.hasSuffix("Docker.app") }),
         ("Claude", { p in p.hasSuffix("/Application Support/Claude") || p.hasSuffix("/.claude") || p.hasSuffix("Claude.app") }),
-        ("Caches", { p in p.contains("/Library/Caches/") || p.hasPrefix(Paths.userFolders) || p.hasSuffix("/.npm") || p.hasSuffix("/.cache") }),
+        ("Caches", { p in has(p, "/Library/Caches/") || p.hasPrefix(Paths.userFolders) || p.hasSuffix("/.npm") || p.hasSuffix("/.cache") }),
         ("Apps", { p in p.hasPrefix("/Applications/") }),
         ("Projects", { p in
             let home = Paths.home
@@ -169,15 +174,7 @@ public enum SpaceTree {
     /// The folder is a cache the catalogue cleans, or holds what it cleans. "Your call"
     /// entries (games, VM images) aren't caches, so they keep their own kind.
     static func isCatalogued(_ path: String) -> Bool {
-        for entry in Catalog.all where entry.level != .yourCall {
-            switch entry.target {
-            case .paths(let list): if list.map(Paths.expand).contains(path) { return true }
-            case .adminContents(let dir): if dir == path { return true }
-            case .oldChildren(let dir, _), .oldFiles(let dir, _, _): if Paths.expand(dir) == path { return true }
-            case .docker, .probe: break
-            }
-        }
-        return false
+        CatalogIndex.current.caches.contains(path)
     }
 
     /// Spotlight's last-opened date, else the last modification.
