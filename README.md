@@ -14,6 +14,14 @@ This builds `Headroom.app` into `~/Applications` and the `headroom` command into
 
 Requires macOS 26 or later and Xcode 26.
 
+### Sharing a build
+
+```bash
+scripts/build-app.sh --release
+```
+
+This signs with your Developer ID Application certificate and hardened runtime, notarizes with Apple, staples the ticket, and writes `build/Headroom.zip`, which opens on another Mac without a Gatekeeper warning. Store notarization credentials once with `xcrun notarytool store-credentials headroom-notary --apple-id <apple id> --team-id <team id> --password <app-specific password>`. Set `HEADROOM_SIGN_IDENTITY` when the keychain holds more than one Developer ID certificate. The build is Apple Silicon only.
+
 ## Command line
 
 ```bash
