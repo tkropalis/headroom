@@ -13,9 +13,6 @@ struct HeadroomApp: App {
                 .environment(model)
         } label: {
             MenuBarLabel(model: model)
-                .task {
-                    if let screen = DevPreview.requested { DevPreview.show(screen, model: model) }
-                }
         }
         .menuBarExtraStyle(.window)
 
@@ -28,39 +25,12 @@ struct HeadroomApp: App {
             SpaceMapWindow()
                 .environment(model)
         }
-        .defaultSize(width: 1000, height: 640)
+        .defaultSize(width: 1280, height: 820)
+        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
         // Only opens when asked for, never at launch or from a restored session.
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
-    }
-}
-
-/// The Space Map, plus the sheets it starts: offloading, and reviews opened from the inspector.
-struct SpaceMapWindow: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        @Bindable var model = model
-        SpaceMapView(model: model.spaceMap)
-            .frame(minWidth: 760, minHeight: 460)
-            .sheet(isPresented: Binding(get: { model.offloadRequest != nil }, set: { if !$0 { model.offloadRequest = nil } })) {
-                if let item = model.offloadRequest {
-                    OffloadSheet(item: item) { record in model.offloadFinished(record) }
-                }
-            }
-            .sheet(isPresented: Binding(get: { model.flowInWindow && model.screen != .main },
-                                        set: { if !$0 { model.flowInWindow = false; model.screen = .main } })) {
-                FlowSheet().environment(model)
-            }
-            // Headroom is a menu bar app; while this window is open it behaves like a normal app.
-            .onAppear {
-                NSApp.setActivationPolicy(.regular)
-                NSApp.activate()
-                model.refreshProcesses()
-                model.spaceMap.refresh()
-            }
-            .onDisappear { NSApp.setActivationPolicy(.accessory) }
     }
 }
 
@@ -92,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// The drive symbol and free space shown in the menu bar.
 struct MenuBarLabel: View {
     let model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         HStack(spacing: 4) {
@@ -101,6 +72,9 @@ struct MenuBarLabel: View {
             }
         }
         .accessibilityLabel("Headroom, \(model.disk.map { ByteFormat.string($0.available) } ?? "unknown") free")
+        .task {
+            if let screen = DevPreview.requested { DevPreview.show(screen, model: model, openWindow: openWindow) }
+        }
     }
 }
 

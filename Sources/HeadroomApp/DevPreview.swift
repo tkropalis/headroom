@@ -14,7 +14,11 @@ enum DevPreview {
 
     static var windows: [NSWindow] = []
 
-    static func show(_ screen: String, model: AppModel) {
+    static func show(_ screen: String, model: AppModel, openWindow: OpenWindowAction) {
+        if screen == "spacemap" || screen.hasPrefix("spacemap:") {
+            showSpaceMap(screen, model: model, openWindow: openWindow)
+            return
+        }
         let root: AnyView
         switch screen {
         case "settings":
@@ -29,14 +33,8 @@ enum DevPreview {
                 }
             }
             root = AnyView(HistorySettings().environment(model).frame(width: 620, height: 600))
-        case "spacemap":
-            root = AnyView(SpaceMapView(model: model.spaceMap).environment(model).frame(width: 1000, height: 640))
         case "claude":
             root = AnyView(ClaudeSettings().environment(model).frame(width: 560, height: 680))
-        case let name where name.hasPrefix("spacemap:"):
-            // Opens the Space Map in a folder's parent with the folder selected, e.g. spacemap:~/Library/Caches/foo
-            model.spaceMap.reveal(Paths.expand(String(name.dropFirst("spacemap:".count))))
-            root = AnyView(SpaceMapView(model: model.spaceMap).environment(model).frame(width: 1000, height: 640))
         case "graphics":
             let names: [Graphic.Name] = [.ollie, .allClean, .access, .scan]
             let row = { (scheme: ColorScheme) in
@@ -60,7 +58,7 @@ enum DevPreview {
             prepare(screen, model: model)
             root = AnyView(PopoverView().environment(model).background(.regularMaterial))
         }
-        let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView],
+        let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                               backing: .buffered, defer: false)
         window.titlebarAppearsTransparent = true
         window.title = "Headroom preview: \(screen)"
@@ -72,6 +70,44 @@ enum DevPreview {
         windows.append(window)
         try? String(window.windowNumber).write(toFile: NSTemporaryDirectory() + "headroom-preview-window",
                                               atomically: true, encoding: .utf8)
+    }
+
+    /// The real Space Map window, so the sidebar and toolbar look as they do in use.
+    /// `spacemap:<path>` opens the folder's parent with the folder selected, e.g. spacemap:~/Library/Caches/foo;
+    /// `spacemap:kinds` opens the Kinds view; `spacemap:plan` adds a sample plan that is never saved.
+    private static func showSpaceMap(_ screen: String, model: AppModel, openWindow: OpenWindowAction) {
+        openWindow(id: "spacemap")
+        Task {
+            try? await Task.sleep(for: .milliseconds(600))
+            if screen == "spacemap:kinds" {
+                model.spaceMap.setLens(.kinds)
+            } else if screen == "spacemap:plan" {
+                // A sample plan from real folders, kept in memory only.
+                let map = model.spaceMap
+                map.savesPlan = false
+                map.plan = CleanupPlan()
+                map.go(.folder(Paths.home))
+                let paths = ["~/.android", "~/Library/Android", "~/Library/Application Support/minecraft",
+                             "~/Library/Caches/com.spotify.client"].map(Paths.expand)
+                let rows = paths.compactMap { path -> SpaceNode? in
+                    guard let snapshot = map.snapshot, FileManager.default.fileExists(atPath: path) else { return nil }
+                    let bytes = SpaceTree.total(under: path, in: snapshot)
+                    return SpaceNode(path: path, name: (path as NSString).lastPathComponent, allocated: bytes, unshared: bytes,
+                                     isDirectory: true, kind: SpaceTree.kind(of: path, isDirectory: true))
+                }
+                map.addToPlan(rows)
+                try? await Task.sleep(for: .milliseconds(300))
+                map.selection = [Paths.expand("~/.android")]
+            } else if screen.hasPrefix("spacemap:") {
+                model.spaceMap.reveal(Paths.expand(String(screen.dropFirst("spacemap:".count))))
+            }
+            guard let window = NSApp.windows.first(where: { $0.identifier?.rawValue.hasPrefix("spacemap") == true || $0.title == "Space Map" })
+            else { return }
+            window.setContentSize(NSSize(width: 1280, height: 820))
+            window.center()
+            try? String(window.windowNumber).write(toFile: NSTemporaryDirectory() + "headroom-preview-window",
+                                                  atomically: true, encoding: .utf8)
+        }
     }
 
     private static func prepare(_ screen: String, model: AppModel) {

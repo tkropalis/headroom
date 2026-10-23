@@ -158,7 +158,7 @@ struct CapacityBar: View {
     @Environment(\.openWindow) private var openWindow
 
     private func open(_ category: String) {
-        model.spaceMap.sidebar = .category(category)
+        model.spaceMap.show(kind: category)
         openWindow(id: "spacemap")
     }
 
@@ -414,7 +414,7 @@ struct Footer: View {
 
             MenuRow(title: "Ask \(Helper.name)…", symbol: "text.bubble", shortcut: "") { model.screen = .helper }
             MenuRow(title: "Space Map…", symbol: "square.grid.3x3.square", shortcut: "") {
-                model.spaceMap.sidebar = .all
+                model.spaceMap.showDisk()
                 openWindow(id: "spacemap")
             }
             MenuRow(title: "Settings…", symbol: "gearshape", shortcut: "⌘,") {

@@ -24,6 +24,19 @@ public struct ProcessSnapshot: Sendable {
         commandLines.contains { $0.contains(needle) }
     }
 
+    /// A short name for a command line: the app it belongs to, else the program's own name.
+    /// "/Applications/Claude.app/…/chrome_crashpad_handler --database=…" is "Claude".
+    public static func displayName(_ commandLine: String) -> String {
+        if let range = commandLine.range(of: ".app/") {
+            let bundle = commandLine[..<range.lowerBound]
+            return (String(bundle) as NSString).lastPathComponent
+        }
+        // Paths may hold spaces, so the program ends where the first option starts.
+        let program = commandLine.components(separatedBy: " -").first ?? commandLine
+        let name = (program.trimmingCharacters(in: .whitespaces) as NSString).lastPathComponent
+        return name.split(separator: " ").first.map(String.init) ?? name
+    }
+
     /// A dev server or build tool running inside a project folder.
     public func processUsing(folder: String) -> String? {
         let prefix = folder.hasSuffix("/") ? folder : folder + "/"

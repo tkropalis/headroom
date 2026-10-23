@@ -114,9 +114,15 @@ public enum SpaceTree {
 
     /// The entries of a folder, each measured (clone-aware), largest first.
     public static func children(of path: String) async -> [SpaceNode] {
+        await children(of: path) { await Sizer.measureAll($0, unshared: true) }
+    }
+
+    /// The entries of a folder, measured by `measure`, for example through a `SizeCache`.
+    public static func children(of path: String,
+                                measure: ([String]) async -> [String: SizeInfo]) async -> [SpaceNode] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []
         let paths = names.map { path == "/" ? "/" + $0 : path + "/" + $0 }
-        let sizes = await Sizer.measureAll(paths, unshared: true)
+        let sizes = await measure(paths)
         return paths.map { child in
             let size = sizes[child] ?? .zero
             let isDirectory = isDirectoryPath(child)
@@ -195,7 +201,7 @@ public enum SpaceTree {
         return Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec))
     }
 
-    static func isDirectoryPath(_ path: String) -> Bool {
+    public static func isDirectoryPath(_ path: String) -> Bool {
         var st = stat()
         return lstat(path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR
     }

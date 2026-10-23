@@ -4,6 +4,14 @@ import Foundation
 public struct FolderSnapshot: Codable, Sendable {
     public var date: Date
     public var sizes: [String: Int64]
+
+    /// Without folders deleted since it was taken, whose space is free now.
+    public func existing() -> FolderSnapshot {
+        FolderSnapshot(date: date, sizes: sizes.filter { path, _ in
+            var st = stat()
+            return lstat(path, &st) == 0
+        })
+    }
 }
 
 public struct GrowthAlert: Codable, Sendable, Identifiable, Hashable {

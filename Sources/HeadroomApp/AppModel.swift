@@ -555,7 +555,7 @@ final class AppModel {
                 return blocker
             }
             if let process = self.processes.processUsing(folder: path) {
-                return "\((process as NSString).lastPathComponent) is using this folder."
+                return "\(ProcessSnapshot.displayName(process)) is using this folder."
             }
             return nil
         }
@@ -590,6 +590,42 @@ final class AppModel {
         map.claude = claudeHooks
         map.hasFullDiskAccess = { [weak self] in self?.hasFullDiskAccess ?? true }
         map.openFullDiskAccess = { [weak self] in self?.openFullDiskAccessSettings() }
+        map.warningBytes = { [weak self] in ByteFormat.gigabytes(Double(self?.warnGB ?? 20)) }
+        map.runPlan = { [weak self] plan, finished in
+            guard let self else { return [] }
+            let candidates = self.allCandidates
+            var quits: [String: [AppRef]] = [:]
+            for item in plan.items { quits[item.path] = map.quits(for: item.path) }
+            let known = quits
+            let outcomes = await PlanRunner().run(
+                plan, drives: Offloader.destinations(),
+                candidate: { path in candidates.first { $0.paths.contains(path) } },
+                quits: { known[$0] ?? [] },
+                onFinish: { item, outcome in Task { @MainActor in finished(item, outcome) } })
+            let done = outcomes.filter { $0.state == .done }
+            if !done.isEmpty {
+                var restorable: [String: String] = [:]
+                for outcome in done { restorable.merge(outcome.restorable ?? [:]) { first, _ in first } }
+                let entry = HistoryEntry(items: done.map(\.name), freed: done.reduce(0) { $0 + $1.freed },
+                                         restorable: restorable.isEmpty ? nil : restorable)
+                Store.appendHistory(entry)
+                self.history.insert(entry, at: 0)
+            }
+            self.offloadedCount = Offloader.records().count
+            self.refreshDisk()
+            return outcomes
+        }
+        map.canPutBack = { [weak self] outcome in self?.canPutBack(outcome) ?? false }
+        map.putBack = { [weak self] outcome in
+            self?.putBack(outcome)
+            self?.spaceMap.refresh()
+        }
+        map.isExcluded = { [weak self] path in self?.excludedPaths.contains(path) ?? false }
+        map.setExcluded = { [weak self] path, excluded in
+            guard let self else { return }
+            if excluded { if !self.excludedPaths.contains(path) { self.excludedPaths.append(path) } }
+            else { self.excludedPaths.removeAll { $0 == path } }
+        }
     }
 
     /// A review started from the Space Map runs in a sheet on that window.
